@@ -1,0 +1,47 @@
+title: "Introduction"
+description: "What DriftGuard is and why data teams use it."
+---
+
+# What is DriftGuard?
+
+DriftGuard is a lightweight API that detects when an incoming data schema
+has drifted from your defined contract — and tells you exactly what
+changed and whether it will break your pipelines.
+
+## The problem it solves
+
+Schema changes are the #1 cause of silent data incidents. A column gets
+renamed. A type narrows from `string` to `integer`. A required field disappears.
+
+Your pipeline keeps running. Your dashboard shows wrong numbers.
+Nobody notices for three days.
+
+DriftGuard catches this **before it reaches production** — in CI, in your
+pipelines, or on a schedule.
+
+## How it works
+
+<Steps>
+  <Step title="Define a contract">
+    POST your expected schema once — column names, types, nullability rules.
+  </Step>
+  <Step title="Run a check">
+    Before any deployment or ingestion, call `POST /v1/checks` with the
+    incoming schema.
+  </Step>
+  <Step title="Get a verdict">
+    DriftGuard returns `BREAKING`, `WARNING`, or `OK` — with a precise diff
+    explaining what changed.
+  </Step>
+</Steps>
+
+## What makes it different
+
+- **API-first** — no platform to adopt, no agent to install
+- **Metadata-only** — we never touch your raw data
+- **Pay-as-you-go** — credits per check, no monthly seat fees
+- **CI-ready** — integrates in one curl command
+
+<Card title="Start in 5 minutes" icon="bolt" href="/quickstart">
+  Follow the quickstart guide to run your first schema check.
+</Card>
