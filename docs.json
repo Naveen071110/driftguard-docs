@@ -1,1 +1,140 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "DriftGuard",
+  "description": "Schema drift detection and data contract guardrails API. Catch breaking schema changes before they reach production.",
 
+  "colors": {
+    "primary": "#E8FF47",
+    "light": "#E8FF47",
+    "dark": "#3DDB84",
+    "background": {
+      "dark": "#0C0C0F"
+    }
+  },
+
+  "logo": {
+    "dark": "/logo/driftguard-dark.svg",
+    "light": "/logo/driftguard-light.svg",
+    "href": "https://driftguard.dev"
+  },
+
+  "favicon": "/favicon.png",
+
+  "navbar": {
+    "links": [
+      {
+        "type": "github",
+        "href": "https://github.com/naveen/driftguard-docs"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Get API Key →",
+      "href": "https://driftguard.dev/#waitlist"
+    }
+  },
+
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/contracts",
+              "concepts/checks",
+              "concepts/severity-levels",
+              "concepts/rules"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/github-actions",
+              "integrations/slack-alerts",
+              "integrations/webhooks"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Contracts",
+            "pages": [
+              "api-reference/contracts/create",
+              "api-reference/contracts/get",
+              "api-reference/contracts/list",
+              "api-reference/contracts/update",
+              "api-reference/contracts/delete"
+            ]
+          },
+          {
+            "group": "Checks",
+            "pages": [
+              "api-reference/checks/run",
+              "api-reference/checks/get"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "api-reference/usage/get"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/webhooks/create",
+              "api-reference/webhooks/list"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "groups": [
+          {
+            "group": "Releases",
+            "pages": ["changelog"]
+          }
+        ]
+      }
+    ]
+  },
+
+  "footer": {
+    "socials": {
+      "github": "https://github.com/naveen/driftguard-docs",
+      "x": "https://x.com/driftguard"
+    },
+    "links": [
+      {
+        "header": "Product",
+        "items": [
+          { "label": "Pricing", "href": "https://driftguard.dev/pricing" },
+          { "label": "Status", "href": "https://status.driftguard.dev" },
+          { "label": "Changelog", "href": "/changelog" }
+        ]
+      },
+      {
+        "header": "Legal",
+        "items": [
+          { "label": "Privacy Policy", "href": "https://driftguard.dev/privacy" },
+          { "label": "Security", "href": "https://driftguard.dev/security" }
+        ]
+      }
+    ]
+  }
+}
