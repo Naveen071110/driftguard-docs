@@ -1,11 +1,15 @@
+---
+title: Authentication
+description: Authenticate with DriftGuard using API keys
+---
+
 # Authentication
 
 DriftGuard uses API keys to authenticate requests. All API requests must include your key in the `X-API-Key` header.
 
 ## API Keys
 
-Your API key is provided when you're approved for beta access. Keys look like: dg_live_xxxxxxxxxxxxxxxxxxxxxxxx
-
+Your API key is provided when you're approved for beta access. Keys look like: `dg_live_xxxxxxxxxxxxxxxxxxxxxxxx`
 
 <Warning>
   - Keep your API key secure — don't commit it to git, don't share it in public forums
@@ -20,26 +24,30 @@ Include your key in every request:
 ```bash
 curl https://api.driftguard.io/v1/usage \
   -H "X-API-Key: dg_live_xxxxxxxx"
+```
 
-Key types
-| Prefix   | Use        | Notes                        |
-| -------- | ---------- | ---------------------------- |
-| dg_live_ | Production | Credits are deducted         |
+## Key types
+
+| Prefix   | Use        | Notes                    |
+| -------- | ---------- | ------------------------ |
+| dg_live_ | Production | Credits are deducted     |
 | dg_test_ | Test       | For sandbox, no credits used |
 
-Always prefer dg_test_ keys for development and dry‑runs.
+Always prefer `dg_test_` keys for development and dry-runs.
 
-Passing the key
+## Passing the key
+
 With curl:
 
-bash
-curl -H "Authorization: Bearer $DRIFTGUARD_KEY" \
-  https://api.driftguard.dev/v1/usage
+```bash
+curl -H "X-API-Key: dg_live_xxxxxxxx" \
+  https://api.driftguard.io/v1/usage
+```
 
-Error codes
+## Error codes
+
 | Status | Meaning                  |
 | ------ | ------------------------ |
 | 401    | Missing or invalid key   |
 | 403    | Key valid but no credits |
 | 429    | Rate limit exceeded      |
-  
