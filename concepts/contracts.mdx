@@ -1,0 +1,68 @@
+# Contracts
+
+A **contract** is the expected schema for a dataset — a list of columns,
+their types, nullability rules, and behavioral rules you define once
+and reuse in every check.
+
+Think of it like a type definition for your data. If the incoming data
+no longer matches the contract, DriftGuard tells you exactly what broke
+and how severe it is.
+
+## What a contract contains
+
+```json
+{
+  "name": "users_production",
+  "columns": [
+    { "name": "user_id",    "type": "string",    "nullable": false },
+    { "name": "email",      "type": "string",    "nullable": false },
+    { "name": "created_at", "type": "timestamp", "nullable": false },
+    { "name": "plan",       "type": "string",    "nullable": true  }
+  ],
+  "rules": {
+    "allow_additional_columns": false,
+    "treat_renames_as_breaking": true
+  }
+}
+
+| Field              | Required | Description                                    |
+| ------------------ | -------- | ---------------------------------------------- |
+| name               | ✅        | Human-readable label for this contract         |
+| columns            | ✅        | Array of column definitions                    |
+| columns[].name     | ✅        | Column name, case-sensitive                    |
+| columns[].type     | ✅        | Expected data type (see supported types below) |
+| columns[].nullable | ✅        | Whether null values are allowed                |
+| rules              | ❌        | Optional behavioral rules (see Rules)          |
+
+Supported column types
+| Type      | Description         |
+| --------- | ------------------- |
+| string    | Any text value      |
+| integer   | Whole numbers       |
+| float     | Decimal numbers     |
+| boolean   | true or false       |
+| timestamp | Date + time values  |
+| date      | Date only (no time) |
+| json      | Nested JSON object  |
+| array     | List of values      |
+| uuid      | UUID format string  |
+| unknown   | Type not enforced   |
+
+Contract versioning
+Every time you update a contract with PUT /v1/contracts/{id},
+DriftGuard increments the internal version number and logs the
+previous version for audit history.
+
+<Info> You don't need to create a new contract for minor updates. Use <code>PUT</code> to update in place — DriftGuard handles versioning automatically. </Info>
+One contract per dataset
+Use one contract per logical dataset, table, or feed. Examples:
+
+One contract per warehouse table (users, orders, events)
+
+One contract per partner data feed
+
+One contract per dbt model output
+
+Next steps
+
+<CardGroup cols={2}> <Card title="Run a check" icon="bolt" href="/concepts/checks"> Learn how checks compare incoming schemas against contracts. </Card> <Card title="Configure rules" icon="sliders" href="/concepts/rules"> Control what counts as BREAKING vs WARNING. </Card> </CardGroup> ```

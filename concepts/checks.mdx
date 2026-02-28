@@ -1,0 +1,102 @@
+# Checks
+
+A **check** is a single evaluation of an incoming schema against a
+stored contract. You run a check by POSTing the incoming schema to
+`POST /v1/checks`. DriftGuard compares it against the contract and
+returns a verdict.
+
+**One check = one credit.**
+
+## What you send
+
+```json
+{
+  "contract_id": "ctr_01HX7KMQZP",
+  "incoming_schema": [
+    { "name": "user_id",    "type": "string"    },
+    { "name": "created_at", "type": "string"    },
+    { "name": "new_field",  "type": "integer"   }
+  ],
+  "source": "ci"
+}
+
+| Field           | Required | Description                                     |
+| --------------- | -------- | ----------------------------------------------- |
+| contract_id     | ✅        | The contract to check against                   |
+| incoming_schema | ✅        | Array of column objects from your actual data   |
+| source          | ❌        | Tag for filtering history: ci, pipeline, manual |
+
+What you get back
+json
+{
+  "check_id": "chk_01HX7KN...",
+  "status": "BREAKING",
+  "summary": {
+    "breaking": 2,
+    "warning": 1,
+    "ok": 1
+  },
+  "diff": [
+    {
+      "column": "email",
+      "change": "REMOVED",
+      "severity": "BREAKING",
+      "message": "Required column 'email' is missing from incoming schema."
+    },
+    {
+      "column": "created_at",
+      "change": "TYPE_CHANGED",
+      "from_type": "timestamp",
+      "to_type": "string",
+      "severity": "BREAKING",
+      "message": "Narrowing type change. Downstream casts will fail."
+    },
+    {
+      "column": "new_field",
+      "change": "ADDED",
+      "severity": "WARNING",
+      "message": "New column detected. allow_additional_columns is false."
+    }
+  ],
+  "evaluated_at": "2026-02-28T00:14:00Z",
+  "credits_used": 1
+}
+
+The status field
+The top-level status is always one of three values:
+| Status   | Meaning                                                              |
+| -------- | -------------------------------------------------------------------- |
+| OK       | Incoming schema fully matches the contract. Safe to proceed.         |
+| WARNING  | Schema has changes that may cause issues. Review recommended.        |
+| BREAKING | Schema has changes that will break downstream consumers. Block this. |
+
+Rule: status reflects the highest severity found in the diff.
+If even one change is BREAKING, the overall status is BREAKING.
+
+Change types in the diff
+| Change              | Description                                                |
+| ------------------- | ---------------------------------------------------------- |
+| REMOVED             | Column exists in contract but missing from incoming schema |
+| ADDED               | Column exists in incoming schema but not in contract       |
+| TYPE_CHANGED        | Column exists in both but type differs                     |
+| NULLABILITY_CHANGED | Column exists in both but nullable flag differs            |
+| NO_CHANGE           | Column matches exactly                                     |
+
+Using status in CI
+The status field is designed to be machine-readable:
+
+bash
+STATUS=$(curl -s -X POST https://api.driftguard.dev/v1/checks \
+  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"contract_id":"ctr_xxx","incoming_schema":[...]}' \
+  | jq -r '.status')
+
+echo "DriftGuard result: $STATUS"
+[ "$STATUS" != "BREAKING" ] || exit 1
+
+Check history
+Every check is stored for 7–90 days depending on your plan.
+Retrieve past checks with GET /v1/checks/{id}.
+
+<Card title="See severity rules" icon="triangle-exclamation" href="/concepts/severity-levels"> Understand exactly what makes a change BREAKING vs WARNING. </Card> ```

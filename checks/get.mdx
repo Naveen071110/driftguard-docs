@@ -1,0 +1,19 @@
+# Get check
+
+Fetch a previously run check.
+
+## Endpoint
+
+```http
+GET /v1/checks/{check_id}
+Host: api.driftguard.dev
+
+Example
+bash
+curl -s https://api.driftguard.dev/v1/checks/chk_01HX7KN123 \
+  -H "Authorization: Bearer $DRIFTGUARD_KEY"
+Response body is identical to POST /v1/checks.
+
+Checks are retained for 7–90 days depending on your plan.
+
+***

@@ -1,0 +1,23 @@
+# Changelog
+
+<Update label="v0.1.0" description="February 27, 2026 — Private beta">
+
+**Initial private beta release**
+
+- `POST /v1/contracts` — Create a contract
+- `GET /v1/contracts/{id}` — Retrieve a contract
+- `GET /v1/contracts` — List contracts
+- `PUT /v1/contracts/{id}` — Update a contract
+- `DELETE /v1/contracts/{id}` — Archive a contract
+- `POST /v1/checks` — Run a schema check
+- `GET /v1/checks/{id}` — Retrieve a check result
+- `GET /v1/usage` — View credits and limits
+- `POST /v1/webhooks` — Register Slack / HTTP webhooks
+- `GET /v1/webhooks` — List configured webhooks
+
+Known limitations:
+
+- Per-column severity overrides not yet available
+- Batch checks endpoint not yet exposed
+- Webhook retries are best-effort only in v0.1
+</Update>

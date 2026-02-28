@@ -1,0 +1,122 @@
+# Quickstart
+
+<Info>
+  You'll need an API key to follow this guide.
+  Request one from your DriftGuard dashboard or waitlist invite email.
+</Info>
+
+Throughout these examples we use the base URL:
+
+```bash
+https://api.driftguard.dev
+
+Replace this with your actual API base URL if different.
+
+1. Set your API key
+bash
+export DRIFTGUARD_KEY="dg_live_xxxxxxxxxxxx"
+On Windows (PowerShell):
+
+powershell
+$env:DRIFTGUARD_KEY="dg_live_xxxxxxxxxxxx"
+
+2. Create your first contract
+bash
+curl -s -X POST https://api.driftguard.dev/v1/contracts \
+  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "users_production",
+    "columns": [
+      { "name": "user_id",    "type": "string",    "nullable": false },
+      { "name": "email",      "type": "string",    "nullable": false },
+      { "name": "created_at", "type": "timestamp", "nullable": false }
+    ],
+    "rules": {
+      "allow_additional_columns": false,
+      "treat_renames_as_breaking": true
+    }
+  }'
+
+
+Sample response:
+json
+{
+  "contract_id": "ctr_01HX7KMQZP",
+  "name": "users_production",
+  "version": 1,
+  "created_at": "2026-02-27T18:00:00Z",
+  "updated_at": "2026-02-27T18:00:00Z"
+}
+Save the contract_id — you'll need it for checks.
+
+3. Run a schema check
+bash
+curl -s -X POST https://api.driftguard.dev/v1/checks \
+  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contract_id": "ctr_01HX7KMQZP",
+    "incoming_schema": [
+      { "name": "user_id",    "type": "string"  },
+      { "name": "created_at", "type": "string"  }
+    ],
+    "source": "ci"
+  }'
+
+
+Sample response:
+json
+{
+  "check_id": "chk_01HX7KN123",
+  "status": "BREAKING",
+  "summary": { "breaking": 2, "warning": 0, "ok": 1 },
+  "diff": [
+    {
+      "column": "email",
+      "change": "REMOVED",
+      "severity": "BREAKING",
+      "message": "Required column 'email' is missing from incoming schema."
+    },
+    {
+      "column": "created_at",
+      "change": "TYPE_CHANGED",
+      "from_type": "timestamp",
+      "to_type": "string",
+      "severity": "BREAKING",
+      "message": "Narrowing type change. Downstream casts will fail."
+    }
+  ],
+  "evaluated_at": "2026-02-27T18:00:14Z",
+  "credits_used": 1
+}
+
+
+4. Use the status in CI
+bash
+STATUS=$(curl -s -X POST https://api.driftguard.dev/v1/checks \
+  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"contract_id":"ctr_01HX7KMQZP","incoming_schema":[...]}' \
+  | jq -r '.status')
+
+echo "DriftGuard result: $STATUS"
+[ "$STATUS" != "BREAKING" ] || exit 1
+
+
+5. Check your usage
+bash
+curl -s https://api.driftguard.dev/v1/usage \
+  -H "Authorization: Bearer $DRIFTGUARD_KEY"
+json
+{
+  "plan": "starter",
+  "credits_total": 500,
+  "credits_used": 1,
+  "credits_remaining": 499,
+  "period_start": "2026-02-01T00:00:00Z",
+  "period_end": "2026-02-29T23:59:59Z",
+  "rate_limit_per_minute": 60
+}
+
+<CardGroup cols={2}> <Card title="Understand contracts" icon="database" href="/concepts/contracts"> Learn how to model your datasets as contracts. </Card> <Card title="API reference" icon="code" href="/api-reference/checks/run"> Full endpoint reference with all parameters. </Card> </CardGroup> ```

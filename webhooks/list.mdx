@@ -1,0 +1,28 @@
+# List webhooks
+
+Returns all webhooks configured for your account.
+
+## Endpoint
+
+```http
+GET /v1/webhooks
+Host: api.driftguard.dev
+
+Example
+bash
+curl -s https://api.driftguard.dev/v1/webhooks \
+  -H "Authorization: Bearer $DRIFTGUARD_KEY"
+json
+[
+  {
+    "webhook_id": "wh_01HX8ABCD",
+    "name": "Slack data-alerts channel",
+    "target_url": "https://hooks.slack.com/services/...",
+    "event_types": ["BREAKING", "WARNING"],
+    "contract_id": null,
+    "created_at": "2026-02-27T19:22:00Z",
+    "active": true
+  }
+]
+
+***

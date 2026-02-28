@@ -1,0 +1,68 @@
+# Create contract
+
+Create a new contract that defines the expected schema for a dataset.
+
+## Endpoint
+
+```http
+POST /v1/contracts
+Host: api.driftguard.dev
+
+
+Request
+Headers
+| Header        | Value              |
+| ------------- | ------------------ |
+| Authorization | Bearer dg_live_... |
+| Content-Type  | application/json   |
+
+body
+{
+  "name": "users_production",
+  "columns": [
+    { "name": "user_id",    "type": "string",    "nullable": false },
+    { "name": "email",      "type": "string",    "nullable": false },
+    { "name": "created_at", "type": "timestamp", "nullable": false }
+  ],
+  "rules": {
+    "allow_additional_columns": false,
+    "treat_renames_as_breaking": true
+  }
+}
+
+Field reference
+| Field              | Type    | Required | Description                                                                         |
+| ------------------ | ------- | -------- | ----------------------------------------------------------------------------------- |
+| name               | string  | ✅        | Human-readable name for the contract                                                |
+| columns            | array   | ✅        | List of column definitions                                                          |
+| columns[].name     | string  | ✅        | Column name (case-sensitive)                                                        |
+| columns[].type     | string  | ✅        | One of string, integer, float, boolean, timestamp, date, json, array, uuid, unknown |
+| columns[].nullable | boolean | ✅        | Whether null values are allowed                                                     |
+| rules              | object  | ❌        | Contract rules, see Rules                                                           |
+
+Response:
+{
+  "contract_id": "ctr_01HX7KMQZP",
+  "name": "users_production",
+  "version": 1,
+  "columns": [
+    { "name": "user_id", "type": "string", "nullable": false },
+    { "name": "email",   "type": "string", "nullable": false }
+  ],
+  "rules": {
+    "allow_additional_columns": false,
+    "treat_renames_as_breaking": true
+  },
+  "created_at": "2026-02-27T18:00:00Z",
+  "updated_at": "2026-02-27T18:00:00Z"
+}
+
+
+Errors
+| Code | Description                                                                   |
+| ---- | ----------------------------------------------------------------------------- |
+| 400  | Invalid contract payload (missing columns, duplicate names, unsupported type) |
+| 401  | Missing or invalid API key                                                    |
+| 409  | Contract with this name already exists for your account                       |
+
+***

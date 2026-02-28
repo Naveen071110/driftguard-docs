@@ -1,0 +1,66 @@
+# Rules
+
+Rules let you customize how DriftGuard evaluates schema changes
+for a specific contract. Set them in the `rules` object when
+creating or updating a contract.
+
+## Available rules
+
+```json
+{
+  "rules": {
+    "allow_additional_columns": false,
+    "treat_renames_as_breaking": true
+  }
+}
+
+| Rule                      | Type    | Default | Description                                                                           |
+| ------------------------- | ------- | ------- | ------------------------------------------------------------------------------------- |
+| allow_additional_columns  | boolean | false   | If true, new columns in incoming schema are classified as OK instead of WARNING       |
+| treat_renames_as_breaking | boolean | true    | If true, detected renames are classified as BREAKING. If false, classified as WARNING |
+
+Rule examples
+Strict contract (default)
+Use this for production tables where any unexpected change
+should be flagged:
+
+json
+{
+  "rules": {
+    "allow_additional_columns": false,
+    "treat_renames_as_breaking": true
+  }
+}
+New columns → WARNING
+Renames → BREAKING
+
+Flexible contract
+Use this for partner feeds or raw ingestion layers where
+extra columns are expected and acceptable:
+
+json
+{
+  "rules": {
+    "allow_additional_columns": true,
+    "treat_renames_as_breaking": false
+  }
+}
+New columns → OK
+Renames → WARNING
+
+Recommended for dbt models
+json
+{
+  "rules": {
+    "allow_additional_columns": false,
+    "treat_renames_as_breaking": true
+  }
+}
+dbt model outputs should be fully predictable. Any unexpected
+change in shape should be a WARNING at minimum.
+
+<Info> Per-column severity overrides are on the roadmap for v0.2. This will let you mark specific columns as <code>ignore</code>, <code>warning-only</code>, or <code>breaking-only</code> regardless of change type. </Info>
+
+Next steps
+
+<CardGroup cols={2}> <Card title="API: Create contract" icon="code" href="/api-reference/contracts/create"> See the full contract creation endpoint with all parameters. </Card> <Card title="Severity levels" icon="triangle-exclamation" href="/concepts/severity-levels"> See the full default severity matrix. </Card> </CardGroup> ```

@@ -1,0 +1,92 @@
+# Generic Webhooks
+
+In addition to Slack, you can send DriftGuard check results to any
+HTTP endpoint — your own backend, PagerDuty, a monitoring system, or
+a custom incident pipeline.
+
+## Register a webhook
+
+```bash
+curl -s -X POST https://api.driftguard.dev/v1/webhooks \
+  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My pipeline alert",
+    "target_url": "https://your-app.com/webhooks/driftguard",
+    "event_types": ["BREAKING"],
+    "contract_id": "ctr_01HX7KMQZP"
+  }'
+
+| Field       | Required | Description                                   |
+| ----------- | -------- | --------------------------------------------- |
+| name        | ❌        | Friendly label for this webhook               |
+| target_url  | ✅        | URL to which DriftGuard will POST results     |
+| event_types | ✅        | Array of statuses to send: BREAKING, WARNING  |
+| contract_id | ❌        | Limit to one contract; null for all contracts |
+
+
+Payload format
+When a check completes with a status included in event_types,
+DriftGuard sends a POST request to your target_url:
+{
+  "event": "check.completed",
+  "check_id": "chk_01HX7KN123",
+  "status": "BREAKING",
+  "contract_id": "ctr_01HX7KMQZP",
+  "contract_name": "users_production",
+  "summary": {
+    "breaking": 2,
+    "warning": 1,
+    "ok": 14
+  },
+  "diff": [
+    {
+      "column": "email",
+      "change": "REMOVED",
+      "severity": "BREAKING",
+      "message": "Required column 'email' is missing from incoming schema."
+    }
+  ],
+  "evaluated_at": "2026-02-28T00:14:00Z"
+}
+
+
+Securing webhooks
+Every webhook request includes a signature header so you can
+verify that it came from DriftGuard:
+
+text
+X-DriftGuard-Signature: t=1709097600,v1=hex_hmac_signature
+To verify:
+
+Concatenate the timestamp (t) and raw request body with a .:
+t.body
+
+Compute an HMAC SHA256 using your webhook secret
+
+Compare the hex digest to v1 in constant time
+
+Webhook secrets are generated per webhook and visible once when
+you create them in the dashboard.
+
+<Warning> Always validate the signature and timestamp before trusting any webhook request. Reject requests older than 5 minutes. </Warning>
+
+Listing webhooks
+bash
+curl -s https://api.driftguard.dev/v1/webhooks \
+  -H "Authorization: Bearer $DRIFTGUARD_KEY"
+json
+[
+  {
+    "webhook_id": "wh_01HX8ABCD",
+    "name": "Slack data-alerts channel",
+    "target_url": "https://hooks.slack.com/...",
+    "event_types": ["BREAKING", "WARNING"],
+    "contract_id": null,
+    "created_at": "2026-02-27T19:22:00Z",
+    "active": true
+  }
+]
+
+
+<Card title="API reference" icon="code" href="/api-reference/webhooks/create"> See the full webhook API reference. </Card> ```

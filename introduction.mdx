@@ -1,35 +1,74 @@
-# What is DriftGuard?
+---
+title: Introduction
+description: Schema drift detection for data pipelines that actually works
+---
 
-DriftGuard is a lightweight API that detects when an incoming data schema
-has drifted from your defined contract — and tells you exactly what
-changed and whether it will break your pipelines.
+# DriftGuard API
 
-## The problem it solves
+**Prevent pipeline failures before they happen.** DriftGuard is a metadata-only API that catches breaking schema changes in your data pipelines, warehouses, and integrations.
 
-Schema changes are the #1 cause of silent data incidents. A column gets
-renamed. A type narrows from `string` to `integer`. A required field disappears.
+## What is DriftGuard?
 
-Your pipeline keeps running. Your dashboard shows wrong numbers.
-Nobody notices for three days.
+Data pipelines break when schemas change unexpectedly. A column gets renamed. A number becomes a string. A required field disappears. These "small" changes cause big problems: failed DAGs, wrong dashboards, hours of firefighting.
 
-DriftGuard catches this **before it reaches production** — in CI, in your
-pipelines, or on a schedule.
+DriftGuard solves this with **data contracts**:
+
+1. **Define** what your data should look like (the contract)
+2. **Check** incoming schemas against that contract
+3. **Alert** when drift is detected — before it breaks production
+
+## Why DriftGuard?
+
+<CardGroup cols={2}>
+  <Card title="Metadata-Only" icon="shield-check">
+    We store column names and types, never your actual data. No PII, no security review delays.
+  </Card>
+  <Card title="API-First" icon="code">
+    One HTTP endpoint. No platform to adopt, no months-long implementation. Works with dbt, Airflow, Fivetran, or custom Python.
+  </Card>
+  <Card title="Pay As You Go" icon="credit-card">
+    $10 for 500 checks. No monthly minimums, no contracts. Credits never expire.
+  </Card>
+  <Card title="CI/CD Native" icon="git-pull-request">
+    Catch drift in pull requests, not in production. GitHub Action available.
+  </Card>
+</CardGroup>
 
 ## How it works
 
-<Steps>
-  <Step title="Define a contract">
-    POST your expected schema once — column names, types, nullability rules.
-  </Step>
-  <Step title="Run a check">
-    Before any deployment or ingestion, call `POST /v1/checks` with the
-    incoming schema.
-  </Step>
-  <Step title="Get a verdict">
-    DriftGuard returns `BREAKING`, `WARNING`, or `OK` — with a precise diff
-    explaining what changed.
-  </Step>
-</Steps>
+```bash
+# 1. Define your contract
+curl -X POST https://api.driftguard.io/v1/contracts \
+  -H "X-API-Key: dg_live_xxxxxxxx" \
+  -d '{
+    "name": "users",
+    "schema": {
+      "columns": [
+        {"name": "id", "type": "integer", "required": true},
+        {"name": "email", "type": "string", "required": true}
+      ]
+    }
+  }'
+
+# 2. Check incoming data
+curl -X POST https://api.driftguard.io/v1/check \
+  -H "X-API-Key: dg_live_xxxxxxxx" \
+  -d '{
+    "contract_id": "ct_abc123",
+    "incoming_schema": {...}
+  }'
+
+# 3. Get instant verdict
+{
+  "result": "breaking",
+  "severity": 95,
+  "diff": {
+    "removed": ["email"],
+    "type_changes": [],
+    "added": []
+  }
+}
+
 
 ## What makes it different
 
@@ -41,3 +80,23 @@ pipelines, or on a schedule.
 <Card title="Start in 5 minutes" icon="bolt" href="/quickstart">
   Follow the quickstart guide to run your first schema check.
 </Card>
+
+Quick links
+<CardGroup cols={3}>
+  <Card title="5-Minute Quickstart" icon="rocket" href="/quickstart">
+    Get your first schema check running
+  </Card>
+  <Card title="Core Concepts" icon="book-open" href="/concepts/contracts">
+    Understand contracts, validation, and severity
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Complete endpoint documentation
+  </Card>
+</CardGroup>
+Need help?
+Email: singhnaveen360@gmail.com
+Twitter/X: @naveenbale
+GitHub: https://github.com/Naveen071110/driftguard-docs
+<Note>
+  DriftGuard is currently in private beta. [Request access] to get your API key.
+</Note>

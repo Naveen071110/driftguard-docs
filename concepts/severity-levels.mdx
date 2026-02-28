@@ -1,0 +1,91 @@
+# Severity Levels
+
+Every change DriftGuard detects gets a severity level. Understanding
+what triggers each level helps you configure contracts correctly and
+reduce false positives.
+
+## The three levels
+
+<CardGroup cols={3}>
+  <Card title="BREAKING" icon="circle-xmark" iconType="solid" color="#FF4D4D">
+    Will cause downstream failures. Block the pipeline or fail CI.
+  </Card>
+  <Card title="WARNING" icon="triangle-exclamation" iconType="solid" color="#F5A623">
+    May cause issues. Review before proceeding.
+  </Card>
+  <Card title="OK" icon="circle-check" iconType="solid" color="#3DDB84">
+    No issues detected. Safe to proceed.
+  </Card>
+</CardGroup>
+
+## Default severity matrix
+
+| Change | Default Severity | Reason |
+|---|---|---|
+| Required column removed | **BREAKING** | Downstream queries will fail on missing column |
+| Optional column removed | **WARNING** | May break some consumers but not all |
+| Type narrowed (e.g. string → integer) | **BREAKING** | Existing casts will fail |
+| Type widened (e.g. integer → float) | **WARNING** | Usually safe but worth reviewing |
+| Column renamed | **BREAKING** (if `treat_renames_as_breaking: true`) | All references to old name break |
+| New column added | **WARNING** (if `allow_additional_columns: false`) | Unexpected shape change |
+| New column added | **OK** (if `allow_additional_columns: true`) | Expected and allowed |
+| Nullable → non-nullable | **BREAKING** | Existing null values will fail validation |
+| Non-nullable → nullable | **WARNING** | Relaxes constraint, usually safe |
+| No change | **OK** | Column matches contract exactly |
+
+## Real examples
+
+### BREAKING: required column removed
+
+```json
+// Contract has:
+{ "name": "email", "type": "string", "nullable": false }
+
+// Incoming schema is missing "email" entirely
+
+// DriftGuard result:
+{
+  "column": "email",
+  "change": "REMOVED",
+  "severity": "BREAKING",
+  "message": "Required column 'email' is missing from incoming schema."
+}
+
+BREAKING: type narrowed
+json
+// Contract has:
+{ "name": "created_at", "type": "timestamp" }
+
+// Incoming schema has:
+{ "name": "created_at", "type": "string" }
+
+// DriftGuard result:
+{
+  "column": "created_at",
+  "change": "TYPE_CHANGED",
+  "from_type": "timestamp",
+  "to_type": "string",
+  "severity": "BREAKING",
+  "message": "Narrowing type change. Downstream casts will fail."
+}
+
+WARNING: new column added unexpectedly
+json
+// Contract rules: { "allow_additional_columns": false }
+// Incoming schema has a new column "updated_at" not in contract
+
+// DriftGuard result:
+{
+  "column": "updated_at",
+  "change": "ADDED",
+  "severity": "WARNING",
+  "message": "New column detected. allow_additional_columns is false in this contract."
+}
+
+Overriding severity
+You can customize severity per contract using
+Rules. For example, setting
+allow_additional_columns: true downgrades new column detection
+from WARNING to OK.
+
+<Info> Custom per-column severity overrides are on the roadmap for v0.2. For now, use contract-level rules to tune sensitivity. </Info> ```

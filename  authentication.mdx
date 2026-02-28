@@ -1,0 +1,24 @@
+# Authentication
+
+DriftGuard uses API keys to authenticate requests. All API requests must include your key in the `X-API-Key` header.
+
+## API Keys
+
+Your API key is provided when you're approved for beta access. Keys look like: dg_live_xxxxxxxxxxxxxxxxxxxxxxxx
+
+
+<Warning>
+  - Keep your API key secure — don't commit it to git, don't share it in public forums
+  - If compromised, email naveen@driftguard.io immediately to rotate
+  - We never ask for your API key via email or support chat
+</Warning>
+
+## Using your API key
+
+Include your key in every request:
+
+```bash
+curl https://api.driftguard.io/v1/usage \
+  -H "X-API-Key: dg_live_xxxxxxxx"
+
+  

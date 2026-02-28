@@ -1,0 +1,107 @@
+# GitHub Actions Integration
+
+Run a DriftGuard schema check on every pull request.
+If the incoming schema is `BREAKING` against your contract,
+the CI job fails and the PR is blocked.
+
+## Prerequisites
+
+- A DriftGuard API key (`dg_live_...` or `dg_test_...`)
+- A contract already created (`ctr_...`)
+- Your repo on GitHub
+
+## Step 1: Add your API key as a secret
+
+1. Go to your GitHub repo → **Settings → Secrets and variables → Actions**
+2. Click **New repository secret**
+3. Name: `DRIFTGUARD_KEY`
+4. Value: your API key
+5. Click **Add secret**
+
+## Step 2: Create the workflow file
+
+Create `.github/workflows/schema-check.yml` in your repo:
+
+```yaml
+name: DriftGuard Schema Check
+
+on:
+  pull_request:
+    branches: [main, staging]
+
+jobs:
+  schema-check:
+    name: Check schema drift
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run DriftGuard check
+        env:
+          DRIFTGUARD_KEY: ${{ secrets.DRIFTGUARD_KEY }}
+        run: |
+          RESULT=$(curl -s -X POST https://api.driftguard.dev/v1/checks \
+            -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "contract_id": "ctr_YOUR_CONTRACT_ID",
+              "incoming_schema": [
+                { "name": "user_id",    "type": "string",    "nullable": false },
+                { "name": "email",      "type": "string",    "nullable": false },
+                { "name": "created_at", "type": "timestamp", "nullable": false }
+              ],
+              "source": "ci"
+            }')
+
+          echo "$RESULT" | jq .
+
+          STATUS=$(echo "$RESULT" | jq -r '.status')
+          echo "DriftGuard status: $STATUS"
+
+          if [ "$STATUS" = "BREAKING" ]; then
+            echo "❌ BREAKING schema change detected. Failing CI."
+            echo "$RESULT" | jq '.diff[] | select(.severity == "BREAKING")'
+            exit 1
+          elif [ "$STATUS" = "WARNING" ]; then
+            echo "⚠️  WARNING: Schema changes detected. Review before merging."
+          else
+            echo "✅ Schema check passed."
+          fi
+
+<Warning> Replace <code>ctr_YOUR_CONTRACT_ID</code> with your actual contract ID from <code>POST /v1/contracts</code> or your DriftGuard dashboard. </Warning>
+
+Step 3: Generate your incoming schema dynamically
+In a real pipeline, you'd generate incoming_schema from your
+actual data instead of hardcoding it. For example, using Python:
+
+python
+import pandas as pd
+import json
+
+df = pd.read_parquet("users.parquet")
+
+schema = [
+    {
+        "name": col,
+        "type": str(df[col].dtype),
+        "nullable": bool(df[col].isnull().any())
+    }
+    for col in df.columns
+]
+
+print(json.dumps(schema))
+Pipe this JSON into the curl command in your CI job.
+
+What failure looks like
+When a BREAKING change is detected, your PR will show:
+
+text
+
+DriftGuard status: BREAKING
+❌ BREAKING schema change detected. Failing CI.
+...
+Error: Process completed with exit code 1.
+
+<Card title="Set up Slack alerts" icon="slack" href="/integrations/slack-alerts"> Get notified in Slack when a BREAKING check is detected. </Card> ```

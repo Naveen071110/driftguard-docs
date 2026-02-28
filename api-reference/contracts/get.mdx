@@ -1,0 +1,36 @@
+# Get contract
+
+Fetch a single contract by its `contract_id`.
+
+## Endpoint
+
+```http
+GET /v1/contracts/{contract_id}
+Host: api.driftguard.dev
+
+Path parameters
+| Name        | Description                         |
+| ----------- | ----------------------------------- |
+| contract_id | ID returned from POST /v1/contracts |
+
+Example
+curl -s https://api.driftguard.dev/v1/contracts/ctr_01HX7KMQZP \
+  -H "Authorization: Bearer $DRIFTGUARD_KEY"
+
+{
+  "contract_id": "ctr_01HX7KMQZP",
+  "name": "users_production",
+  "version": 1,
+  "columns": [...],
+  "rules": {...},
+  "created_at": "2026-02-27T18:00:00Z",
+  "updated_at": "2026-02-27T18:00:00Z"
+}
+
+Errors
+| Code | Description        |
+| ---- | ------------------ |
+| 401  | Unauthorized       |
+| 404  | Contract not found |
+
+***
