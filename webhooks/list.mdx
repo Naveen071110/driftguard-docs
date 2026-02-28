@@ -7,12 +7,18 @@ Returns all webhooks configured for your account.
 ```http
 GET /v1/webhooks
 Host: api.driftguard.dev
+```
 
-Example
-bash
+## Example
+
+```bash
 curl -s https://api.driftguard.dev/v1/webhooks \
   -H "Authorization: Bearer $DRIFTGUARD_KEY"
-json
+```
+
+## Response
+
+```json
 [
   {
     "webhook_id": "wh_01HX8ABCD",
@@ -24,5 +30,4 @@ json
     "active": true
   }
 ]
-
-***
+```
