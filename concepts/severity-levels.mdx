@@ -1,10 +1,10 @@
 # Severity Levels
 
-Every change DriftGuard detects gets a severity level. Understanding
-what triggers each level helps you configure contracts correctly and
-reduce false positives.
+Every change DriftGuard detects gets a severity level. Understanding what triggers each level helps you configure contracts correctly and reduce false positives.
 
-## The three levels
+---
+
+## The Three Levels
 
 <CardGroup cols={3}>
   <Card title="BREAKING" icon="circle-xmark" iconType="solid" color="#FF4D4D">
@@ -18,24 +18,28 @@ reduce false positives.
   </Card>
 </CardGroup>
 
-## Default severity matrix
+---
 
-| Change | Default Severity | Reason |
-|---|---|---|
-| Required column removed | **BREAKING** | Downstream queries will fail on missing column |
-| Optional column removed | **WARNING** | May break some consumers but not all |
-| Type narrowed (e.g. string → integer) | **BREAKING** | Existing casts will fail |
-| Type widened (e.g. integer → float) | **WARNING** | Usually safe but worth reviewing |
-| Column renamed | **BREAKING** (if `treat_renames_as_breaking: true`) | All references to old name break |
-| New column added | **WARNING** (if `allow_additional_columns: false`) | Unexpected shape change |
-| New column added | **OK** (if `allow_additional_columns: true`) | Expected and allowed |
-| Nullable → non-nullable | **BREAKING** | Existing null values will fail validation |
-| Non-nullable → nullable | **WARNING** | Relaxes constraint, usually safe |
-| No change | **OK** | Column matches contract exactly |
+## Default Severity Matrix
 
-## Real examples
+| Change                                    | Default Severity                                              | Reason                                          |
+| ----------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------- |
+| Required column removed                   | **BREAKING**                                                  | Downstream queries will fail on missing column  |
+| Optional column removed                   | **WARNING**                                                   | May break some consumers but not all            |
+| Type narrowed (e.g. `string → integer`)   | **BREAKING**                                                  | Existing casts will fail                        |
+| Type widened (e.g. `integer → float`)     | **WARNING**                                                   | Usually safe but worth reviewing                |
+| Column renamed                            | **BREAKING** (if `treat_renames_as_breaking: true`)           | All references to old name break                |
+| New column added                          | **WARNING** (if `allow_additional_columns: false`)            | Unexpected shape change                         |
+| New column added                          | **OK** (if `allow_additional_columns: true`)                  | Expected and allowed                            |
+| `nullable → non-nullable`                 | **BREAKING**                                                  | Existing null values will fail validation       |
+| `non-nullable → nullable`                 | **WARNING**                                                   | Relaxes constraint, usually safe                |
+| No change                                 | **OK**                                                        | Column matches contract exactly                 |
 
-### BREAKING: required column removed
+---
+
+## Real Examples
+
+### BREAKING: Required Column Removed
 
 ```json
 // Contract has:
@@ -52,7 +56,7 @@ reduce false positives.
 }
 ```
 
-### BREAKING: type narrowed
+### BREAKING: Type Narrowed
 
 ```json
 // Contract has:
@@ -72,7 +76,7 @@ reduce false positives.
 }
 ```
 
-### WARNING: new column added unexpectedly
+### WARNING: New Column Added Unexpectedly
 
 ```json
 // Contract rules: { "allow_additional_columns": false }
@@ -87,8 +91,12 @@ reduce false positives.
 }
 ```
 
-## Overriding severity
+---
 
-You can customize severity per contract using [Rules](/rules). For example, setting `allow_additional_columns: true` downgrades new column detection from WARNING to OK.
+## Overriding Severity
 
-<Info>Custom per-column severity overrides are on the roadmap for v0.2. For now, use contract-level rules to tune sensitivity.</Info>
+You can customize severity per contract using [Rules](/rules). For example, setting `allow_additional_columns: true` downgrades new column detection from `WARNING` to `OK`.
+
+<Info>
+  Custom per-column severity overrides are on the roadmap for v0.2. For now, use contract-level rules to tune sensitivity.
+</Info>
