@@ -1,8 +1,9 @@
 # GitHub Actions Integration
 
 Run a DriftGuard schema check on every pull request.
-If the incoming schema is `BREAKING` against your contract,
-the CI job fails and the PR is blocked.
+If the incoming schema is `BREAKING` against your contract, the CI job fails and the PR is blocked.
+
+---
 
 ## Prerequisites
 
@@ -10,7 +11,9 @@ the CI job fails and the PR is blocked.
 - A contract already created (`ctr_...`)
 - Your repo on GitHub
 
-## Step 1: Add your API key as a secret
+---
+
+## Step 1: Add Your API Key as a Secret
 
 1. Go to your GitHub repo → **Settings → Secrets and variables → Actions**
 2. Click **New repository secret**
@@ -18,7 +21,9 @@ the CI job fails and the PR is blocked.
 4. Value: your API key
 5. Click **Add secret**
 
-## Step 2: Create the workflow file
+---
+
+## Step 2: Create the Workflow File
 
 Create `.github/workflows/schema-check.yml` in your repo:
 
@@ -69,14 +74,19 @@ jobs:
           else
             echo "✅ Schema check passed."
           fi
+```
 
-<Warning> Replace <code>ctr_YOUR_CONTRACT_ID</code> with your actual contract ID from <code>POST /v1/contracts</code> or your DriftGuard dashboard. </Warning>
+<Warning>
+  Replace `ctr_YOUR_CONTRACT_ID` with your actual contract ID from `POST /v1/contracts` or your DriftGuard dashboard.
+</Warning>
 
-Step 3: Generate your incoming schema dynamically
-In a real pipeline, you'd generate incoming_schema from your
-actual data instead of hardcoding it. For example, using Python:
+---
 
-python
+## Step 3: Generate Your Incoming Schema Dynamically
+
+In a real pipeline, you'd generate `incoming_schema` from your actual data instead of hardcoding it. For example, using Python:
+
+```python
 import pandas as pd
 import json
 
@@ -92,16 +102,25 @@ schema = [
 ]
 
 print(json.dumps(schema))
-Pipe this JSON into the curl command in your CI job.
+```
 
-What failure looks like
-When a BREAKING change is detected, your PR will show:
+Pipe this JSON into the `curl` command in your CI job.
 
-text
+---
 
+## What Failure Looks Like
+
+When a `BREAKING` change is detected, your PR will show:
+
+```text
 DriftGuard status: BREAKING
 ❌ BREAKING schema change detected. Failing CI.
 ...
 Error: Process completed with exit code 1.
+```
 
-<Card title="Set up Slack alerts" icon="slack" href="/integrations/slack-alerts"> Get notified in Slack when a BREAKING check is detected. </Card> ```
+---
+
+<Card title="Set up Slack Alerts" icon="slack" href="/integrations/slack-alerts">
+  Get notified in Slack when a BREAKING check is detected.
+</Card>
