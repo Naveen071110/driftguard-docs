@@ -1,23 +1,37 @@
-# List contracts
+# List Contracts
 
 Returns all contracts for the authenticated account.
+
+---
 
 ## Endpoint
 
 ```http
 GET /v1/contracts
 Host: api.driftguard.dev
+```
 
-Query parameters
-Name	Type	Description
-limit	integer	Max records to return (default 50, max 100)
-cursor	string	Pagination cursor from previous response
+---
 
-Example
-bash
+## Query Parameters
+
+| Name     | Type      | Description                                       |
+| -------- | --------- | ------------------------------------------------- |
+| `limit`  | `integer` | Max records to return (default `50`, max `100`)   |
+| `cursor` | `string`  | Pagination cursor from previous response          |
+
+---
+
+## Example
+
+```bash
 curl -s "https://api.driftguard.dev/v1/contracts?limit=20" \
   -H "Authorization: Bearer $DRIFTGUARD_KEY"
-json
+```
+
+### Response
+
+```json
 {
   "data": [
     {
@@ -33,5 +47,4 @@ json
   ],
   "next_cursor": null
 }
-
-***
+```
