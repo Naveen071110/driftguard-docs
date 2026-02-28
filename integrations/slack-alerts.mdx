@@ -1,7 +1,8 @@
 # Slack Alerts
 
-Configure DriftGuard to send a Slack notification whenever a
-schema check returns `BREAKING` or `WARNING`.
+Configure DriftGuard to send a Slack notification whenever a schema check returns `BREAKING` or `WARNING`.
+
+---
 
 ## Step 1: Create a Slack Incoming Webhook
 
@@ -14,7 +15,9 @@ schema check returns `BREAKING` or `WARNING`.
 7. Copy the webhook URL — it looks like:
    `https://hooks.slack.com/services/T.../B.../xxx`
 
-## Step 2: Register the webhook with DriftGuard
+---
+
+## Step 2: Register the Webhook with DriftGuard
 
 ```bash
 curl -s -X POST https://api.driftguard.dev/v1/webhooks \
@@ -26,13 +29,16 @@ curl -s -X POST https://api.driftguard.dev/v1/webhooks \
     "event_types": ["BREAKING", "WARNING"],
     "contract_id": null
   }'
+```
 
-Step 3: See the alert in Slack
-When a check is BREAKING or WARNING, DriftGuard sends a message:
+---
 
-text
+## Step 3: See the Alert in Slack
+
+When a check is `BREAKING` or `WARNING`, DriftGuard sends a message:
+
+```text
 🔴 DriftGuard — BREAKING change detected
-
 Contract:  users_production
 Check ID:  chk_01HX7KN123
 Time:      2026-02-28 00:14 UTC
@@ -42,10 +48,19 @@ Changes:
   △ created_at  TYPE_CHANGED  timestamp → string
 
 2 breaking · 0 warning · 1 ok
-You can change which statuses trigger alerts by editing event_types:
+```
 
-["BREAKING"] — only critical incidents
+You can change which statuses trigger alerts by editing `event_types`:
 
-["BREAKING", "WARNING"] — all drift
+- `["BREAKING"]` — only critical incidents
+- `["BREAKING", "WARNING"]` — all drift
 
-<Info> To stop alerts, either delete the webhook from your DriftGuard dashboard or set <code>active: false</code> via the API. </Info> <Card title="Use generic webhooks" icon="code" href="/integrations/webhooks"> Send the same payloads to your own backend or alerting system. </Card> ```
+---
+
+<Info>
+  To stop alerts, either delete the webhook from your DriftGuard dashboard or set `active: false` via the API.
+</Info>
+
+<Card title="Use Generic Webhooks" icon="code" href="/integrations/webhooks">
+  Send the same payloads to your own backend or alerting system.
+</Card>
