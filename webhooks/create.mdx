@@ -1,50 +1,46 @@
-# Webhooks Configuration
+# Create Webhook
 
-## Overview
-This document explains how to configure webhooks within the Driftguard system. Webhooks allow you to receive notifications for events in real-time.
+Register a webhook endpoint that DriftGuard will call whenever a check completes with certain statuses.
 
-## Table of Contents
-- [Event Types](#event-types)
-- [Setting Up a Webhook](#setting-up-a-webhook)
-- [Testing Your Webhook](#testing-your-webhook)
+## Endpoint
 
-## Event Types
-Driftguard supports various event types that can trigger webhook notifications:
+<div className="api-endpoint">
 
-- **User Created**: Triggered when a new user is created.
-- **Order Completed**: Triggered when an order is completed.
-- **Error Occurred**: Triggered when an error occurs in the system.
+```http
+POST /v1/webhooks
+Host: api.driftguard.dev
+```
 
-## Setting Up a Webhook
-To set up a webhook, use the following steps:
+</div>
 
-### Step 1: Configure the Webhook URL
-1. Navigate to the Webhooks section in your Driftguard dashboard.
-2. Click on **Add Webhook**.
-3. Enter the webhook URL where notifications should be sent.
-
-### Step 2: Select Event Types
-Choose the event types you want to subscribe to. You can select multiple events.
-
-### Step 3: Test the Webhook
-Use the **Test Webhook** button to send a test notification to your configured URL.
+## Request
 
 ```json
 {
-  "event": "User Created",
-  "data": {
-    "user_id": "12345",
-    "username": "test_user"
-  }
+  "name": "Slack data-alerts channel",
+  "target_url": "https://hooks.slack.com/services/...",
+  "event_types": ["BREAKING", "WARNING"],
+  "contract_id": null
 }
 ```
 
-## Testing Your Webhook
-To ensure your webhook is functioning correctly, consider the following best practices:
-- Use tools like [Postman](https://www.postman.com) to simulate webhook events.
-- Review logs for any errors or issues.
+| Field       | Type          | Required | Description                                |
+| ----------- | ------------- | -------- | ------------------------------------------ |
+| name        | string        | ❌       | Friendly label for the webhook             |
+| target_url  | string        | ✅       | URL DriftGuard will POST to                |
+| event_types | array         | ✅       | Statuses that trigger this webhook         |
+| contract_id | string / null | ❌       | Scope to a single contract or null for all |
 
-## Conclusion
-Configuring webhooks in Driftguard is a straightforward process. Follow the steps above to ensure you receive real-time notifications for important events.
+## Response
 
-For further assistance, please consult the [Driftguard Documentation](https://www.driftguard.com/docs).
+```json
+{
+  "webhook_id": "wh_01HX8ABCD",
+  "name": "Slack data-alerts channel",
+  "target_url": "https://hooks.slack.com/services/...",
+  "event_types": ["BREAKING", "WARNING"],
+  "contract_id": null,
+  "created_at": "2026-02-27T19:22:00Z",
+  "active": true
+}
+```
