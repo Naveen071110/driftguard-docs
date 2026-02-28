@@ -9,19 +9,28 @@ Throughout these examples we use the base URL:
 
 ```bash
 https://api.driftguard.dev
+```
 
 Replace this with your actual API base URL if different.
 
-1. Set your API key
-bash
-export DRIFTGUARD_KEY="dg_live_xxxxxxxxxxxx"
-On Windows (PowerShell):
+## 1. Set your API key
 
-powershell
-$env:DRIFTGUARD_KEY="dg_live_xxxxxxxxxxxx"
+<Tabs>
+  <Tab title="Mac/Linux">
+    ```bash
+    export DRIFTGUARD_KEY="dg_live_xxxxxxxxxxxx"
+    ```
+  </Tab>
+  <Tab title="Windows (PowerShell)">
+    ```powershell
+    $env:DRIFTGUARD_KEY="dg_live_xxxxxxxxxxxx"
+    ```
+  </Tab>
+</Tabs>
 
-2. Create your first contract
-bash
+## 2. Create your first contract
+
+```bash
 curl -s -X POST https://api.driftguard.dev/v1/contracts \
   -H "Authorization: Bearer $DRIFTGUARD_KEY" \
   -H "Content-Type: application/json" \
@@ -37,10 +46,11 @@ curl -s -X POST https://api.driftguard.dev/v1/contracts \
       "treat_renames_as_breaking": true
     }
   }'
-
+```
 
 Sample response:
-json
+
+```json
 {
   "contract_id": "ctr_01HX7KMQZP",
   "name": "users_production",
@@ -48,10 +58,13 @@ json
   "created_at": "2026-02-27T18:00:00Z",
   "updated_at": "2026-02-27T18:00:00Z"
 }
+```
+
 Save the contract_id — you'll need it for checks.
 
-3. Run a schema check
-bash
+## 3. Run a schema check
+
+```bash
 curl -s -X POST https://api.driftguard.dev/v1/checks \
   -H "Authorization: Bearer $DRIFTGUARD_KEY" \
   -H "Content-Type: application/json" \
@@ -63,10 +76,11 @@ curl -s -X POST https://api.driftguard.dev/v1/checks \
     ],
     "source": "ci"
   }'
-
+```
 
 Sample response:
-json
+
+```json
 {
   "check_id": "chk_01HX7KN123",
   "status": "BREAKING",
@@ -90,10 +104,11 @@ json
   "evaluated_at": "2026-02-27T18:00:14Z",
   "credits_used": 1
 }
+```
 
+## 4. Use the status in CI
 
-4. Use the status in CI
-bash
+```bash
 STATUS=$(curl -s -X POST https://api.driftguard.dev/v1/checks \
   -H "Authorization: Bearer $DRIFTGUARD_KEY" \
   -H "Content-Type: application/json" \
@@ -102,13 +117,16 @@ STATUS=$(curl -s -X POST https://api.driftguard.dev/v1/checks \
 
 echo "DriftGuard result: $STATUS"
 [ "$STATUS" != "BREAKING" ] || exit 1
+```
 
+## 5. Check your usage
 
-5. Check your usage
-bash
+```bash
 curl -s https://api.driftguard.dev/v1/usage \
   -H "Authorization: Bearer $DRIFTGUARD_KEY"
-json
+```
+
+```json
 {
   "plan": "starter",
   "credits_total": 500,
@@ -118,5 +136,13 @@ json
   "period_end": "2026-02-29T23:59:59Z",
   "rate_limit_per_minute": 60
 }
+```
 
-<CardGroup cols={2}> <Card title="Understand contracts" icon="database" href="/concepts/contracts"> Learn how to model your datasets as contracts. </Card> <Card title="API reference" icon="code" href="/api-reference/checks/run"> Full endpoint reference with all parameters. </Card> </CardGroup> ```
+<CardGroup cols={2}>
+  <Card title="Understand contracts" icon="database" href="/concepts/contracts">
+    Learn how to model your datasets as contracts.
+  </Card>
+  <Card title="API reference" icon="code" href="/api-reference/checks/run">
+    Full endpoint reference with all parameters.
+  </Card>
+</CardGroup>
