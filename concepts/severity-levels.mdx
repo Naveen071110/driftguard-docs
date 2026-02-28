@@ -50,9 +50,11 @@ reduce false positives.
   "severity": "BREAKING",
   "message": "Required column 'email' is missing from incoming schema."
 }
+```
 
-BREAKING: type narrowed
-json
+### BREAKING: type narrowed
+
+```json
 // Contract has:
 { "name": "created_at", "type": "timestamp" }
 
@@ -68,9 +70,11 @@ json
   "severity": "BREAKING",
   "message": "Narrowing type change. Downstream casts will fail."
 }
+```
 
-WARNING: new column added unexpectedly
-json
+### WARNING: new column added unexpectedly
+
+```json
 // Contract rules: { "allow_additional_columns": false }
 // Incoming schema has a new column "updated_at" not in contract
 
@@ -81,11 +85,10 @@ json
   "severity": "WARNING",
   "message": "New column detected. allow_additional_columns is false in this contract."
 }
+```
 
-Overriding severity
-You can customize severity per contract using
-Rules. For example, setting
-allow_additional_columns: true downgrades new column detection
-from WARNING to OK.
+## Overriding severity
 
-<Info> Custom per-column severity overrides are on the roadmap for v0.2. For now, use contract-level rules to tune sensitivity. </Info> ```
+You can customize severity per contract using [Rules](/rules). For example, setting `allow_additional_columns: true` downgrades new column detection from WARNING to OK.
+
+<Info>Custom per-column severity overrides are on the roadmap for v0.2. For now, use contract-level rules to tune sensitivity.</Info>
