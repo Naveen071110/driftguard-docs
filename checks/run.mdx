@@ -1,16 +1,21 @@
-# Run check
+# Run Check
 
-Compare an incoming schema against an existing contract and
-return a status (`OK`, `WARNING`, `BREAKING`) and a diff.
+Compare an incoming schema against an existing contract and return a status (`OK`, `WARNING`, `BREAKING`) and a diff.
+
+---
 
 ## Endpoint
 
 ```http
 POST /v1/checks
 Host: api.driftguard.dev
+```
 
-Request
-json
+---
+
+## Request
+
+```json
 {
   "contract_id": "ctr_01HX7KMQZP",
   "incoming_schema": [
@@ -19,18 +24,21 @@ json
   ],
   "source": "ci"
 }
+```
 
-| Field                  | Type   | Required | Description                         |
-| ---------------------- | ------ | -------- | ----------------------------------- |
-| contract_id            | string | ✅        | ID of the contract to check against |
-| incoming_schema        | array  | ✅        | Columns from the actual data source |
-| incoming_schema[].name | string | ✅        | Column name                         |
-| incoming_schema[].type | string | ✅        | Detected type                       |
-| source                 | string | ❌        | Tag e.g. ci, pipeline, manual       |
+| Field                    | Type     | Required | Description                                          |
+| ------------------------ | -------- | -------- | ---------------------------------------------------- |
+| `contract_id`            | `string` | ✅        | ID of the contract to check against                  |
+| `incoming_schema`        | `array`  | ✅        | Columns from the actual data source                  |
+| `incoming_schema[].name` | `string` | ✅        | Column name                                          |
+| `incoming_schema[].type` | `string` | ✅        | Detected type                                        |
+| `source`                 | `string` | ❌        | Tag e.g. `ci`, `pipeline`, `manual`                  |
 
+---
 
-Response
-json
+## Response
+
+```json
 {
   "check_id": "chk_01HX7KN123",
   "status": "BREAKING",
@@ -58,14 +66,16 @@ json
   "evaluated_at": "2026-02-27T18:00:14Z",
   "credits_used": 1
 }
+```
 
-Errors
-| Code | Description           |
-| ---- | --------------------- |
-| 400  | Invalid schema format |
-| 401  | Unauthorized          |
-| 403  | Out of credits        |
-| 404  | Contract not found    |
-| 429  | Rate limit exceeded   |
+---
 
-***
+## Errors
+
+| Code  | Description             |
+| ----- | ----------------------- |
+| `400` | Invalid schema format   |
+| `401` | Unauthorized            |
+| `403` | Out of credits          |
+| `404` | Contract not found      |
+| `429` | Rate limit exceeded     |
