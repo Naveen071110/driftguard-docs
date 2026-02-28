@@ -1,18 +1,23 @@
-# Update contract
+# Update Contract
 
 Update the name, columns, or rules of an existing contract.
+
+---
 
 ## Endpoint
 
 ```http
 PUT /v1/contracts/{contract_id}
 Host: api.driftguard.dev
+```
 
-Request
-Same body shape as POST /v1/contracts.
-Any omitted fields are left unchanged.
+---
 
-bash
+## Request
+
+Same body shape as `POST /v1/contracts`. Any omitted fields are left unchanged.
+
+```bash
 curl -s -X PUT https://api.driftguard.dev/v1/contracts/ctr_01HX7KMQZP \
   -H "Authorization: Bearer $DRIFTGUARD_KEY" \
   -H "Content-Type: application/json" \
@@ -22,9 +27,13 @@ curl -s -X PUT https://api.driftguard.dev/v1/contracts/ctr_01HX7KMQZP \
       "treat_renames_as_breaking": true
     }
   }'
+```
 
-Sample response:
-json
+---
+
+## Response
+
+```json
 {
   "contract_id": "ctr_01HX7KMQZP",
   "name": "users_production",
@@ -36,12 +45,14 @@ json
   "created_at": "2026-02-27T18:00:00Z",
   "updated_at": "2026-02-28T09:12:00Z"
 }
+```
 
-Errors
-Code	Description
-400	    Invalid payload
-401	    Unauthorized
-404	    Contract not found
+---
 
+## Errors
 
-***
+| Code  | Description          |
+| ----- | -------------------- |
+| `400` | Invalid payload      |
+| `401` | Unauthorized         |
+| `404` | Contract not found   |
