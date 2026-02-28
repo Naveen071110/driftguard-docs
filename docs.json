@@ -12,17 +12,14 @@
     "dark": "#16a34a"
   },
 
-  "logo": {
-    "href": "https://driftguard.dev"
-  },
-
+  "logo": "/logo.png",
   "favicon": "/favicon.png",
 
   "navbar": {
     "links": [
       {
         "type": "github",
-        "href": "https://github.com/naveen/driftguard-docs"
+        "href": "https://github.com/naveen071110/driftguard-docs"
       }
     ],
     "primary": {
@@ -121,7 +118,7 @@
 
   "footer": {
     "socials": {
-      "github": "https://github.com/naveen/driftguard-docs"
+      "github": "https://github.com/naveen071110/driftguard-docs"
     },
     "links": [
       {
