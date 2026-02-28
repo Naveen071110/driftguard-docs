@@ -1,18 +1,28 @@
-# Get usage
+# Get Usage
 
 Returns your current plan, credits, and rate limits.
+
+---
 
 ## Endpoint
 
 ```http
 GET /v1/usage
 Host: api.driftguard.dev
+```
 
-Example
-bash
+---
+
+## Example
+
+```bash
 curl -s https://api.driftguard.dev/v1/usage \
   -H "Authorization: Bearer $DRIFTGUARD_KEY"
-json
+```
+
+### Response
+
+```json
 {
   "plan": "starter",
   "credits_total": 500,
@@ -22,8 +32,10 @@ json
   "period_end": "2026-02-29T23:59:59Z",
   "rate_limit_per_minute": 60
 }
+```
 
-Use this endpoint to build dashboards or alerts around credit usage.
+---
 
-
-***
+<Note>
+  Use this endpoint to build dashboards or alerts around credit usage.
+</Note>
