@@ -1,26 +1,33 @@
-# Delete contract
+# Delete Contract
 
-Archives a contract. Archived contracts no longer accept new checks
-but remain in history for audit purposes.
+Archives a contract. Archived contracts no longer accept new checks but remain in history for audit purposes.
+
+---
 
 ## Endpoint
 
 ```http
 DELETE /v1/contracts/{contract_id}
 Host: api.driftguard.dev
+```
 
-Example
-bash
+---
+
+## Example
+
+```bash
 curl -s -X DELETE https://api.driftguard.dev/v1/contracts/ctr_01HX7KMQZP \
   -H "Authorization: Bearer $DRIFTGUARD_KEY"
+```
 
-Response:
-json
+---
+
+## Response
+
+```json
 {
   "contract_id": "ctr_01HX7KMQZP",
   "archived": true,
   "archived_at": "2026-02-28T10:00:00Z"
 }
-
-
-***
+```
