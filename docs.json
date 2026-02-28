@@ -1,73 +1,144 @@
 {
-  "name": "DriftGuard API",
-  "description": "Schema drift detection and data contract guardrails for data pipelines",
-  "logo": "/logo.png",
-  "favicon": "/favicon.png",
+  "$schema": "https://mintlify.com/docs.json",
+
+  "theme": "maple",
+
+  "name": "DriftGuard",
+  "description": "Schema drift detection and data contract guardrails API. Catch breaking schema changes before they reach production.",
+
   "colors": {
     "primary": "#22c55e",
     "light": "#4ade80",
-    "dark": "#16a34a",
-    "background": {
-      "dark": "#0d0d0d",
-      "light": "#ffffff"
+    "dark": "#16a34a"
+  },
+
+  "logo": {
+    "href": "https://driftguard.dev"
+  },
+
+  "favicon": "/favicon.png",
+
+  "navbar": {
+    "links": [
+      {
+        "type": "github",
+        "href": "https://github.com/naveen/driftguard-docs"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Get API Key →",
+      "href": "https://driftguard.dev/#waitlist"
     }
   },
-  "font": {
-    "family": "JetBrains Mono"
-  },
-  "sidebar": {
-    "items": [
+
+  "navigation": {
+    "dropdowns": [
       {
-        "group": "Getting Started",
-        "pages": [
-          "introduction",
-          "quickstart"
+        "dropdown": "Docs",
+        "icon": "book",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "authentication"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/contracts",
+              "concepts/checks",
+              "concepts/severity-levels",
+              "concepts/rules"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/github-actions",
+              "integrations/slack-alerts",
+              "integrations/webhooks"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "changelog"
+            ]
+          }
         ]
       },
       {
-        "group": "Core Concepts",
-        "pages": [
-          "concepts/contracts",
-          "concepts/schema-validation",
-          "concepts/severity-levels"
-        ]
-      },
-      {
-        "group": "API Reference",
-        "pages": [
-          "api-reference/overview",
-          "api-reference/contracts",
-          "api-reference/checks",
-          "api-reference/usage",
-          "api-reference/webhooks"
-        ]
-      },
-      {
-        "group": "Integrations",
-        "pages": [
-          "integrations/github-actions",
-          "integrations/dbt",
-          "integrations/airflow"
-        ]
-      },
-      {
-        "group": "Resources",
-        "pages": [
-          "authentication",
-          "changelog"
+        "dropdown": "API Reference",
+        "icon": "code",
+        "groups": [
+          {
+            "group": "Contracts",
+            "pages": [
+              "api-reference/contracts/create",
+              "api-reference/contracts/get",
+              "api-reference/contracts/list",
+              "api-reference/contracts/update",
+              "api-reference/contracts/delete"
+            ]
+          },
+          {
+            "group": "Checks",
+            "pages": [
+              "api-reference/checks/run",
+              "api-reference/checks/get"
+            ]
+          },
+          {
+            "group": "Usage",
+            "pages": [
+              "api-reference/usage/get"
+            ]
+          },
+          {
+            "group": "Webhooks",
+            "pages": [
+              "api-reference/webhooks/create",
+              "api-reference/webhooks/list"
+            ]
+          }
         ]
       }
     ]
   },
+
   "api": {
-    "baseUrl": "https://api.driftguard.io/v1",
+    "baseUrl": "https://api.driftguard.dev",
     "auth": {
       "method": "bearer",
-      "name": "X-API-Key"
+      "name": "Authorization",
+      "valuePrefix": "Bearer "
     }
   },
-  "seo": {
-    "title": "DriftGuard API Docs - Schema Drift Detection",
-    "description": "Prevent data pipeline failures with metadata-only schema validation. API-first, pay-as-you-go, 15-minute integration."
+
+  "footer": {
+    "socials": {
+      "github": "https://github.com/naveen/driftguard-docs"
+    },
+    "links": [
+      {
+        "header": "Product",
+        "items": [
+          { "label": "Pricing",   "href": "https://driftguard.dev/pricing" },
+          { "label": "Status",    "href": "https://status.driftguard.dev" },
+          { "label": "Changelog", "href": "/changelog" }
+        ]
+      },
+      {
+        "header": "Legal",
+        "items": [
+          { "label": "Privacy Policy", "href": "https://driftguard.dev/privacy" },
+          { "label": "Security",       "href": "https://driftguard.dev/security" }
+        ]
+      }
+    ]
   }
 }
