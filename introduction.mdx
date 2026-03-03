@@ -36,49 +36,78 @@ DriftGuard solves this with **data contracts**:
 ---
 
 ## How It Works
-
 ```bash
 # 1. Define your contract
-curl -X POST https://api.driftguard.io/v1/contracts \
-  -H "X-API-Key: dg_live_xxxxxxxx" \
+curl -X POST https://api.driftguard.dev/api/v1/contracts \
+  -H "X-API-Key: dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
   -d '{
     "name": "users",
     "schema": {
       "columns": [
-        {"name": "id", "type": "integer", "required": true},
-        {"name": "email", "type": "string", "required": true}
+        { "name": "id",    "type": "integer", "required": true },
+        { "name": "email", "type": "string",  "required": true }
       ]
     }
   }'
 
-# 2. Check incoming data
-curl -X POST https://api.driftguard.io/v1/check \
-  -H "X-API-Key: dg_live_xxxxxxxx" \
+# 2. Check an incoming schema against that contract (costs 1 credit)
+curl -X POST https://api.driftguard.dev/api/v1/check \
+  -H "X-API-Key: dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
   -d '{
-    "contract_id": "ct_abc123",
-    "incoming_schema": {...}
+    "contract_id": "your_contract_id_here",
+    "incoming_schema": {
+      "columns": [
+        { "name": "id",   "type": "integer" },
+        { "name": "email", "type": "integer" }
+      ]
+    }
   }'
 
-# 3. Get instant verdict
+# 3. Get an instant verdict
 {
   "result": "breaking",
   "severity": 95,
   "diff": {
-    "removed": ["email"],
-    "type_changes": [],
+    "removed": [],
+    "type_changes": [{ "column": "email", "from": "string", "to": "integer" }],
     "added": []
   }
 }
 ```
+
+<Note>
+  All endpoints use the `X-API-Key` header for authentication. The `/api/v1/health` endpoint is the only one that does not require a key.
+</Note>
 
 ---
 
 ## What Makes It Different
 
 - **API-first** — no platform to adopt, no agent to install
-- **Metadata-only** — we never touch your raw data
-- **Pay-as-you-go** — credits per check, no monthly seat fees
-- **CI-ready** — integrates in one curl command
+- **Metadata-only** — we never store or touch your raw data, only column names and types
+- **Pay-as-you-go** — 1 credit per check, no monthly seat fees. Credits never expire.
+- **CI-ready** — integrates in one curl command, GitHub Action available
+- **Schema inference** — send a sample JSON payload and DriftGuard auto-generates your contract schema
+
+---
+
+## Valid Column Types
+
+DriftGuard supports the following column types in contracts and incoming schemas:
+
+| Type | Description |
+|------|-------------|
+| `string` | Text values |
+| `integer` | Whole numbers |
+| `number` | Floating point / decimal numbers |
+| `boolean` | True / false values |
+| `date` | Date without time (`YYYY-MM-DD`) |
+| `timestamp` | Date with time |
+| `json` | Nested JSON / object values |
+
+Any type outside this list will be rejected with a validation error.
 
 ---
 
@@ -95,7 +124,7 @@ curl -X POST https://api.driftguard.io/v1/check \
     Get your first schema check running.
   </Card>
   <Card title="Core Concepts" icon="book-open" href="/concepts/contracts">
-    Understand contracts, validation, and severity.
+    Understand contracts, checks, and severity scoring.
   </Card>
   <Card title="API Reference" icon="code" href="/api-reference/overview">
     Complete endpoint documentation.
@@ -111,5 +140,5 @@ curl -X POST https://api.driftguard.io/v1/check \
 - **GitHub:** [Naveen071110/driftguard-docs](https://github.com/Naveen071110/driftguard-docs)
 
 <Note>
-  DriftGuard is currently in private beta. [Request access](/request-access) to get your API key.
+  DriftGuard is currently in private beta. [Join the waitlist](https://driftguard.dev/#waitlist) to get your API key.
 </Note>

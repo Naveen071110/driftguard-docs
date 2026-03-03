@@ -1,148 +1,221 @@
-# Quickstart
+---
+title: "Quickstart"
+description: "Run your first schema check in under 5 minutes."
+---
 
 <Info>
-  You'll need an API key to follow this guide.
-  Request one from your DriftGuard dashboard or waitlist invite email.
+  You'll need an API key to follow this guide. Request one from your
+  [DriftGuard dashboard](https://driftguard.dev/dashboard) or your waitlist invite email.
 </Info>
 
-Throughout these examples we use the base URL:
-
-```bash
-https://api.driftguard.dev
+All examples use the base URL:
+```
+https://api.driftguard.dev/api/v1
 ```
 
-Replace this with your actual API base URL if different.
+All endpoints require the `X-API-Key` header. The only exception is `GET /api/v1/health`.
+
+---
 
 ## 1. Set your API key
 
+Your key must match the format `dg_live_<24+ chars>` or `dg_test_<24+ chars>`.
+
 <Tabs>
   <Tab title="Mac/Linux">
-    ```bash
-    export DRIFTGUARD_KEY="dg_live_xxxxxxxxxxxx"
-    ```
+```bash
+    export DRIFTGUARD_KEY="dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
   </Tab>
   <Tab title="Windows (PowerShell)">
-    ```powershell
-    $env:DRIFTGUARD_KEY="dg_live_xxxxxxxxxxxx"
-    ```
+```powershell
+    $env:DRIFTGUARD_KEY="dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
   </Tab>
 </Tabs>
 
-## 2. Create your first contract
+<Note>
+  Use a `dg_live_` key for production and a `dg_test_` key for development and CI.
+  You can create and manage keys from your [dashboard](https://driftguard.dev/dashboard).
+  Keys are shown in full **only once** at creation — store yours immediately.
+</Note>
 
+---
+
+## 2. (Optional) Infer a contract from sample data
+
+Not sure what your contract schema should look like? Send a sample JSON payload
+and DriftGuard will generate the column definitions for you automatically.
 ```bash
-curl -s -X POST https://api.driftguard.dev/v1/contracts \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+curl -s -X POST https://api.driftguard.dev/api/v1/contracts/infer \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sample": {
+      "user_id": 1,
+      "email": "user@example.com",
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  }'
+```
+
+Sample response:
+```json
+{
+  "columns": [
+    { "name": "user_id",    "type": "integer",   "required": true },
+    { "name": "email",      "type": "string",    "required": true },
+    { "name": "created_at", "type": "timestamp", "required": true }
+  ]
+}
+```
+
+Copy these columns into your contract creation request in the next step.
+
+---
+
+## 3. Create your first contract
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/contracts \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "users_production",
-    "columns": [
-      { "name": "user_id",    "type": "string",    "nullable": false },
-      { "name": "email",      "type": "string",    "nullable": false },
-      { "name": "created_at", "type": "timestamp", "nullable": false }
-    ],
-    "rules": {
-      "allow_additional_columns": false,
-      "treat_renames_as_breaking": true
+    "schema": {
+      "columns": [
+        { "name": "user_id",    "type": "integer",   "required": true },
+        { "name": "email",      "type": "string",    "required": true },
+        { "name": "created_at", "type": "timestamp", "required": true }
+      ]
     }
   }'
 ```
 
 Sample response:
-
 ```json
 {
-  "contract_id": "ctr_01HX7KMQZP",
+  "id": "your_contract_id_here",
   "name": "users_production",
   "version": 1,
-  "created_at": "2026-02-27T18:00:00Z",
-  "updated_at": "2026-02-27T18:00:00Z"
+  "created_at": "2026-03-01T18:00:00Z",
+  "updated_at": "2026-03-01T18:00:00Z"
 }
 ```
 
-Save the contract_id — you'll need it for checks.
+<Warning>
+  Save the `id` from the response — you'll need it to run checks against this contract.
+</Warning>
 
-## 3. Run a schema check
+**Valid column types:** `string`, `integer`, `number`, `boolean`, `date`, `timestamp`, `json`.
+Any type outside this list will be rejected.
 
+---
+
+## 4. Run a schema check
+
+Each check costs **1 credit** and compares an incoming schema against your saved contract.
 ```bash
-curl -s -X POST https://api.driftguard.dev/v1/checks \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+curl -s -X POST https://api.driftguard.dev/api/v1/check \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "contract_id": "ctr_01HX7KMQZP",
-    "incoming_schema": [
-      { "name": "user_id",    "type": "string"  },
-      { "name": "created_at", "type": "string"  }
-    ],
-    "source": "ci"
+    "contract_id": "your_contract_id_here",
+    "incoming_schema": {
+      "columns": [
+        { "name": "user_id",    "type": "integer" },
+        { "name": "created_at", "type": "string"  }
+      ]
+    }
   }'
 ```
 
 Sample response:
-
 ```json
 {
-  "check_id": "chk_01HX7KN123",
-  "status": "BREAKING",
-  "summary": { "breaking": 2, "warning": 0, "ok": 1 },
-  "diff": [
-    {
-      "column": "email",
-      "change": "REMOVED",
-      "severity": "BREAKING",
-      "message": "Required column 'email' is missing from incoming schema."
-    },
-    {
-      "column": "created_at",
-      "change": "TYPE_CHANGED",
-      "from_type": "timestamp",
-      "to_type": "string",
-      "severity": "BREAKING",
-      "message": "Narrowing type change. Downstream casts will fail."
-    }
-  ],
-  "evaluated_at": "2026-02-27T18:00:14Z",
-  "credits_used": 1
-}
-```
-
-## 4. Use the status in CI
-
-```bash
-STATUS=$(curl -s -X POST https://api.driftguard.dev/v1/checks \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"contract_id":"ctr_01HX7KMQZP","incoming_schema":[...]}' \
-  | jq -r '.status')
-
-echo "DriftGuard result: $STATUS"
-[ "$STATUS" != "BREAKING" ] || exit 1
-```
-
-## 5. Check your usage
-
-```bash
-curl -s https://api.driftguard.dev/v1/usage \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY"
-```
-
-```json
-{
-  "plan": "starter",
-  "credits_total": 500,
+  "id": "your_check_id_here",
+  "result": "breaking",
+  "severity": 70,
+  "diff": {
+    "removed": ["email"],
+    "type_changes": [
+      { "column": "created_at", "from": "timestamp", "to": "string" }
+    ],
+    "added": []
+  },
   "credits_used": 1,
-  "credits_remaining": 499,
-  "period_start": "2026-02-01T00:00:00Z",
-  "period_end": "2026-02-29T23:59:59Z",
-  "rate_limit_per_minute": 60
+  "created_at": "2026-03-01T18:00:14Z"
 }
 ```
+
+The three possible `result` values are:
+
+| Result | Severity Score | Meaning |
+|--------|---------------|---------|
+| `pass` | 0 – 19 | Schema matches contract |
+| `warning` | 20 – 89 | Drift detected, may cause issues |
+| `breaking` | 90 – 100 | Drift will break downstream consumers |
+
+---
+
+## 5. Use the result in CI
+
+Exit with a non-zero code on breaking changes to fail your pipeline or pull request check.
+```bash
+RESULT=$(curl -s -X POST https://api.driftguard.dev/api/v1/check \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contract_id": "your_contract_id_here",
+    "incoming_schema": {
+      "columns": [
+        { "name": "user_id", "type": "integer" },
+        { "name": "email",   "type": "string"  }
+      ]
+    }
+  }' | jq -r '.result')
+
+echo "DriftGuard result: $RESULT"
+[ "$RESULT" != "breaking" ] || exit 1
+```
+
+<Tip>
+  You can also fail on `warning` by changing the condition to
+  `[ "$RESULT" = "pass" ] || exit 1` for stricter pipelines.
+</Tip>
+
+---
+
+## 6. Check your usage
+```bash
+curl -s https://api.driftguard.dev/api/v1/usage \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
+```
+```json
+{
+  "credits_remaining": 499,
+  "credits_used": 1,
+  "total_checks": 1
+}
+```
+
+The rate limit is **100 requests per minute** per API key. If you exceed it,
+you'll receive a `429 Too Many Requests` response.
+
+---
+
+## Next Steps
 
 <CardGroup cols={2}>
   <Card title="Understand contracts" icon="database" href="/concepts/contracts">
-    Learn how to model your datasets as contracts.
+    Learn how to model your datasets as contracts, including versioning and valid types.
   </Card>
-  <Card title="API reference" icon="code" href="/api-reference/checks/run">
-    Full endpoint reference with all parameters.
+  <Card title="Severity scoring" icon="gauge" href="/concepts/severity-levels">
+    Understand exactly how the 0–100 severity score is calculated.
+  </Card>
+  <Card title="Webhooks" icon="bell" href="/integrations/webhooks">
+    Get notified instantly when a breaking check is detected.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Full endpoint reference with all parameters and response shapes.
   </Card>
 </CardGroup>

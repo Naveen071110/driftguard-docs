@@ -1,48 +1,157 @@
-# Authentication
+---
+title: "Authentication"
+description: "How to authenticate requests to the DriftGuard API."
+---
 
-DriftGuard uses API keys to authenticate requests. All API requests must include your key in the `X-API-Key` header.
+DriftGuard uses API keys to authenticate all requests. Every API call (except `GET /api/v1/health`)
+must include your key in the `X-API-Key` header.
 
-## API Keys
+---
 
-Your API key is provided when you're approved for beta access. Keys look like: `dg_live_xxxxxxxxxxxxxxxxxxxxxxxx`
+## API Key Format
+
+All DriftGuard API keys follow this format:
+```
+dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+dg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+The full format regex is: `dg_(live|test)_<24+ characters>` — meaning the total key
+length must be **32 characters minimum**. Any key that doesn't match this pattern
+will be rejected with a `401` before even reaching the auth check.
 
 <Warning>
-  - Keep your API key secure — don't commit it to git, don't share it in public forums
-  - If compromised, email naveen@driftguard.io immediately to rotate
-  - We never ask for your API key via email or support chat
+  - Never commit your API key to git or share it in public forums
+  - Keys are stored as SHA-256 hashes on our servers — we cannot recover a lost key for you
+  - If you believe your key is compromised, revoke it immediately from your [dashboard](https://driftguard.dev/dashboard) and create a new one
+  - We will never ask for your API key via email or support chat
 </Warning>
 
-## Using your API key
+---
 
-Include your key in every request:
+## Using Your API Key
 
+Include your key in the `X-API-Key` header on every request:
 ```bash
-curl https://api.driftguard.io/v1/usage \
-  -H "X-API-Key: dg_live_xxxxxxxx"
+curl https://api.driftguard.dev/api/v1/usage \
+  -H "X-API-Key: dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
-## Key types
+<Note>
+  The correct header name is `X-API-Key`. Do not use `Authorization: Bearer` —
+  that format is not supported and will return a `401`.
+</Note>
 
-| Prefix   | Use        | Notes                    |
-| -------- | ---------- | ------------------------ |
-| dg_live_ | Production | Credits are deducted     |
-| dg_test_ | Test       | For sandbox, no credits used |
+---
 
-Always prefer `dg_test_` keys for development and dry-runs.
+## Key Types
 
-## Passing the key
+| Prefix | Environment | Behaviour |
+|--------|-------------|-----------|
+| `dg_live_` | Production | Credits are deducted per check |
+| `dg_test_` | Development | For local development and CI dry-runs |
 
-With curl:
+Use `dg_test_` keys for development and CI pipelines where you don't want to consume
+production credits. Switch to `dg_live_` only when running checks in production.
 
+---
+
+## Key Lifecycle
+
+Keys are managed entirely from your [dashboard](https://driftguard.dev/dashboard).
+Here's what happens at each stage:
+
+| Stage | What it means |
+|-------|---------------|
+| **Created** | Full key shown **once** — copy it immediately, it cannot be retrieved again |
+| **Active** | Key is valid and can authenticate requests |
+| **Revoked** | Key is deactivated — requests will return `401`. Can be reactivated. |
+| **Deleted** | Key is permanently removed. Must be revoked before it can be deleted. |
+
+<Warning>
+  Your key is shown in full **only once** at creation time. After that, only
+  the first 16 characters (the preview) are visible. Store your key in a
+  secrets manager or environment variable immediately.
+</Warning>
+
+---
+
+## Rate Limits
+
+| Limit | Value |
+|-------|-------|
+| Requests per minute (per key) | **100 req/min** |
+| New keys per hour (per user) | **10 keys/hour** |
+
+When you exceed the per-minute rate limit, the API returns `429 Too Many Requests`.
+Wait for the next minute window and retry.
+
+---
+
+## Managing Keys via API
+
+You can also create and manage keys programmatically via the `/api/v1/keys` endpoints.
+
+**List your keys** (previews only — full key is never returned after creation):
 ```bash
-curl -H "X-API-Key: dg_live_xxxxxxxx" \
-  https://api.driftguard.io/v1/usage
+curl https://api.driftguard.dev/api/v1/keys \
+  -H "X-API-Key: dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
-## Error codes
+**Create a new key:**
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/keys \
+  -H "X-API-Key: dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{ "environment": "live" }'
+```
+```json
+{
+  "id": "key_id_here",
+  "key": "dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "environment": "live",
+  "is_active": true,
+  "created_at": "2026-03-01T12:00:00Z"
+}
+```
 
-| Status | Meaning                  |
-| ------ | ------------------------ |
-| 401    | Missing or invalid key   |
-| 403    | Key valid but no credits |
-| 429    | Rate limit exceeded      |
+<Warning>
+  Copy the `key` value from this response immediately — it will not be shown again.
+</Warning>
+
+**Revoke a key:**
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/keys/{id}/revoke \
+  -H "X-API-Key: dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+**Reactivate a revoked key:**
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/keys/{id}/activate \
+  -H "X-API-Key: dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+**Hard delete a key** (must be revoked first):
+```bash
+curl -s -X DELETE https://api.driftguard.dev/api/v1/keys/{id} \
+  -H "X-API-Key: dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+```
+
+---
+
+## Error Codes
+
+| Status | Meaning |
+|--------|---------|
+| `401` | Missing key, invalid key format, or key not found |
+| `403` | Key is valid but account has no credits remaining |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+## Best Practices
+
+- Store keys in environment variables or a secrets manager (AWS Secrets Manager, GitHub Secrets, etc.) — never hardcode them
+- Use `dg_test_` keys in all non-production environments
+- Create separate keys per service or pipeline so you can revoke individual integrations without disrupting others
+- Rotate keys periodically — revoke the old one and create a new one from the dashboard
