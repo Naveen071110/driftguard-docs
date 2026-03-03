@@ -1,23 +1,40 @@
-# Changelog
+---
+title: "Changelog"
+description: "What's new in DriftGuard."
+---
 
-<Update label="v0.1.0" description="February 27, 2026 — Private beta">
+## v0.1.0 — March 2026
 
-**Initial private beta release**
+**Initial private beta release.**
 
-- `POST /v1/contracts` — Create a contract
-- `GET /v1/contracts/{id}` — Retrieve a contract
-- `GET /v1/contracts` — List contracts
-- `PUT /v1/contracts/{id}` — Update a contract
-- `DELETE /v1/contracts/{id}` — Archive a contract
-- `POST /v1/checks` — Run a schema check
-- `GET /v1/checks/{id}` — Retrieve a check result
-- `GET /v1/usage` — View credits and limits
-- `POST /v1/webhooks` — Register Slack / HTTP webhooks
-- `GET /v1/webhooks` — List configured webhooks
+- `POST /api/v1/contracts` — create data contracts
+- `POST /api/v1/contracts/infer` — infer schema from sample data
+- `GET /api/v1/contracts` — list contracts (paginated)
+- `GET /api/v1/contracts/{id}` — get a single contract
+- `POST /api/v1/check` — run a schema check (1 credit)
+- `GET /api/v1/checks/{id}` — retrieve historical check
+- `GET /api/v1/usage` — credits and check count
+- `POST /api/v1/webhooks` — register webhook (HTTPS only, HMAC-SHA256 signed)
+- `GET /api/v1/webhooks` — list webhooks
+- `DELETE /api/v1/webhooks/{id}` — delete webhook
+- `GET /api/v1/keys` — list API keys
+- `POST /api/v1/keys` — create API key
+- `POST /api/v1/keys/{id}/revoke` — revoke key
+- `POST /api/v1/keys/{id}/activate` — reactivate key
+- `DELETE /api/v1/keys/{id}` — hard delete key
+- GitHub Actions integration guide
+- Slack alerts integration guide
+```
 
-Known limitations:
+---
 
-- Per-column severity overrides not yet available
-- Batch checks endpoint not yet exposed
-- Webhook retries are best-effort only in v0.1
-</Update>
+### 2. `README.md` — already updated
+We already rewrote this earlier in our conversation. Make sure the updated version is pushed.
+
+---
+
+### 3. `.github/` folder with one file
+Add a simple issue template so people who find the docs repo can report errors cleanly:
+```
+.github/
+  
