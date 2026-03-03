@@ -12,7 +12,10 @@
     "dark": "#16a34a"
   },
 
-  "logo": "/logo.png",
+  "logo": {
+    "light": "/logo.png",
+    "dark": "/logo.png"
+  },
   "favicon": "/favicon.png",
 
   "navbar": {
