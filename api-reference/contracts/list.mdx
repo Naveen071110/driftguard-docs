@@ -1,50 +1,95 @@
-# List Contracts
-
-Returns all contracts for the authenticated account.
-
+---
+title: "List Contracts"
+description: "Retrieve all contracts associated with your account."
 ---
 
 ## Endpoint
-
 ```http
-GET /v1/contracts
+GET /api/v1/contracts
 Host: api.driftguard.dev
 ```
 
 ---
 
-## Query Parameters
-
-| Name     | Type      | Description                                       |
-| -------- | --------- | ------------------------------------------------- |
-| `limit`  | `integer` | Max records to return (default `50`, max `100`)   |
-| `cursor` | `string`  | Pagination cursor from previous response          |
+## Request
+```bash
+curl -s https://api.driftguard.dev/api/v1/contracts \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
+```
 
 ---
 
-## Example
-
-```bash
-curl -s "https://api.driftguard.dev/v1/contracts?limit=20" \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY"
-```
-
-### Response
-
+## Response
 ```json
-{
-  "data": [
-    {
-      "contract_id": "ctr_01HX7KMQZP",
-      "name": "users_production",
-      "version": 1
+[
+  {
+    "id": "your_contract_id_here",
+    "name": "users_production",
+    "version": 1,
+    "schema": {
+      "columns": [
+        { "name": "user_id",    "type": "integer",   "required": true },
+        { "name": "email",      "type": "string",    "required": true },
+        { "name": "created_at", "type": "timestamp", "required": true }
+      ]
     },
-    {
-      "contract_id": "ctr_01HX7R5ABC",
-      "name": "orders_production",
-      "version": 2
-    }
-  ],
-  "next_cursor": null
-}
+    "created_at": "2026-03-01T18:00:00Z",
+    "updated_at": "2026-03-01T18:00:00Z"
+  },
+  {
+    "id": "your_second_contract_id_here",
+    "name": "orders_production",
+    "version": 2,
+    "schema": {
+      "columns": [
+        { "name": "order_id",  "type": "integer", "required": true },
+        { "name": "status",    "type": "string",  "required": true },
+        { "name": "total",     "type": "number",  "required": false }
+      ]
+    },
+    "created_at": "2026-03-01T17:00:00Z",
+    "updated_at": "2026-03-02T09:00:00Z"
+  }
+]
 ```
+
+### Response Fields
+
+Each object in the array has the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for the contract |
+| `name` | string | The name given to the contract |
+| `version` | integer | Current version number — increments each time the contract schema is updated |
+| `schema.columns` | array | Full list of column definitions |
+| `schema.columns[].name` | string | Column name (case-sensitive) |
+| `schema.columns[].type` | string | Column type — one of `string`, `integer`, `number`, `boolean`, `date`, `timestamp`, `json` |
+| `schema.columns[].required` | boolean | Whether the column must be present in every check |
+| `created_at` | string | ISO 8601 timestamp of when the contract was created |
+| `updated_at` | string | ISO 8601 timestamp of the last update |
+
+<Note>
+  Results are scoped to your account — you will only ever see contracts created
+  with your API key. Pagination support is planned for a future release.
+</Note>
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `401` | Missing or invalid `X-API-Key` |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Create Contract" icon="plus" href="/api-reference/contracts/create">
+    Define a new expected schema as a contract.
+  </Card>
+  <Card title="Get Contract" icon="file-magnifying-glass" href="/api-reference/contracts/get">
+    Retrieve a single contract by its ID.
+  </Card>
+</CardGroup>

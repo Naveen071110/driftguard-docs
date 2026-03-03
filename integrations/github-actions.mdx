@@ -1,14 +1,17 @@
-# GitHub Actions Integration
+---
+title: "GitHub Actions"
+description: "Run a DriftGuard schema check on every pull request and fail CI on breaking schema changes."
+---
 
 Run a DriftGuard schema check on every pull request.
-If the incoming schema is `BREAKING` against your contract, the CI job fails and the PR is blocked.
+If the incoming schema is `breaking` against your contract, the CI job fails and the PR is blocked.
 
 ---
 
 ## Prerequisites
 
 - A DriftGuard API key (`dg_live_...` or `dg_test_...`)
-- A contract already created (`ctr_...`)
+- A contract already created — see [Create Contract](/api-reference/contracts/create)
 - Your repo on GitHub
 
 ---
@@ -18,15 +21,19 @@ If the incoming schema is `BREAKING` against your contract, the CI job fails and
 1. Go to your GitHub repo → **Settings → Secrets and variables → Actions**
 2. Click **New repository secret**
 3. Name: `DRIFTGUARD_KEY`
-4. Value: your API key
+4. Value: your full API key (e.g. `dg_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`)
 5. Click **Add secret**
+
+<Tip>
+  Use a `dg_test_` key in CI to keep your development checks separate from
+  production. Create one from your [dashboard](https://driftguard.dev/dashboard).
+</Tip>
 
 ---
 
 ## Step 2: Create the Workflow File
 
 Create `.github/workflows/schema-check.yml` in your repo:
-
 ```yaml
 name: DriftGuard Schema Check
 
@@ -47,80 +54,121 @@ jobs:
         env:
           DRIFTGUARD_KEY: ${{ secrets.DRIFTGUARD_KEY }}
         run: |
-          RESULT=$(curl -s -X POST https://api.driftguard.dev/v1/checks \
-            -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+          RESULT=$(curl -s -X POST https://api.driftguard.dev/api/v1/check \
+            -H "X-API-Key: $DRIFTGUARD_KEY" \
             -H "Content-Type: application/json" \
             -d '{
-              "contract_id": "ctr_YOUR_CONTRACT_ID",
-              "incoming_schema": [
-                { "name": "user_id",    "type": "string",    "nullable": false },
-                { "name": "email",      "type": "string",    "nullable": false },
-                { "name": "created_at", "type": "timestamp", "nullable": false }
-              ],
-              "source": "ci"
+              "contract_id": "your_contract_id_here",
+              "incoming_schema": {
+                "columns": [
+                  { "name": "user_id",    "type": "integer",   "required": true },
+                  { "name": "email",      "type": "string",    "required": true },
+                  { "name": "created_at", "type": "timestamp", "required": true }
+                ]
+              }
             }')
 
           echo "$RESULT" | jq .
 
-          STATUS=$(echo "$RESULT" | jq -r '.status')
-          echo "DriftGuard status: $STATUS"
+          RESULT_STATUS=$(echo "$RESULT" | jq -r '.result')
+          SEVERITY=$(echo "$RESULT" | jq -r '.severity')
+          echo "DriftGuard result: $RESULT_STATUS (severity: $SEVERITY)"
 
-          if [ "$STATUS" = "BREAKING" ]; then
-            echo "❌ BREAKING schema change detected. Failing CI."
-            echo "$RESULT" | jq '.diff[] | select(.severity == "BREAKING")'
+          if [ "$RESULT_STATUS" = "breaking" ]; then
+            echo "❌ Breaking schema change detected. Failing CI."
+            echo "Removed columns: $(echo "$RESULT" | jq '.diff.removed')"
+            echo "Type changes:    $(echo "$RESULT" | jq '.diff.type_changes')"
             exit 1
-          elif [ "$STATUS" = "WARNING" ]; then
-            echo "⚠️  WARNING: Schema changes detected. Review before merging."
+          elif [ "$RESULT_STATUS" = "warning" ]; then
+            echo "⚠️  Warning: schema drift detected. Review before merging."
+            echo "Added columns: $(echo "$RESULT" | jq '.diff.added')"
           else
             echo "✅ Schema check passed."
           fi
 ```
 
 <Warning>
-  Replace `ctr_YOUR_CONTRACT_ID` with your actual contract ID from `POST /v1/contracts` or your DriftGuard dashboard.
+  Replace `your_contract_id_here` with the `id` returned when you created your
+  contract via [POST /api/v1/contracts](/api-reference/contracts/create).
 </Warning>
 
 ---
 
 ## Step 3: Generate Your Incoming Schema Dynamically
 
-In a real pipeline, you'd generate `incoming_schema` from your actual data instead of hardcoding it. For example, using Python:
-
+In a real pipeline, generate `incoming_schema.columns` from your actual data
+instead of hardcoding it. Here's an example using Python with pandas:
 ```python
 import pandas as pd
 import json
 
 df = pd.read_parquet("users.parquet")
 
-schema = [
+TYPE_MAP = {
+    "int64": "integer",
+    "float64": "number",
+    "object": "string",
+    "bool": "boolean",
+    "datetime64[ns]": "timestamp"
+}
+
+columns = [
     {
         "name": col,
-        "type": str(df[col].dtype),
-        "nullable": bool(df[col].isnull().any())
+        "type": TYPE_MAP.get(str(df[col].dtype), "string"),
+        "required": not df[col].isnull().any()
     }
     for col in df.columns
 ]
 
-print(json.dumps(schema))
+payload = json.dumps({ "columns": columns })
+print(payload)
 ```
 
-Pipe this JSON into the `curl` command in your CI job.
+Then pipe this into your curl command in CI:
+```bash
+SCHEMA=$(python generate_schema.py)
+
+RESULT=$(curl -s -X POST https://api.driftguard.dev/api/v1/check \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"contract_id\": \"your_contract_id_here\", \"incoming_schema\": $SCHEMA}")
+```
+
+<Note>
+  Map your DataFrame dtypes to DriftGuard's supported types: `string`, `integer`,
+  `number`, `boolean`, `date`, `timestamp`, `json`. Any unrecognised type should
+  default to `string`.
+</Note>
 
 ---
 
 ## What Failure Looks Like
 
-When a `BREAKING` change is detected, your PR will show:
-
+When a `breaking` change is detected, your PR will show:
 ```text
-DriftGuard status: BREAKING
-❌ BREAKING schema change detected. Failing CI.
-...
+DriftGuard result: breaking (severity: 70)
+❌ Breaking schema change detected. Failing CI.
+Removed columns: ["email"]
+Type changes: [{"column":"created_at","from":"timestamp","to":"string"}]
 Error: Process completed with exit code 1.
 ```
 
 ---
 
-<Card title="Set up Slack Alerts" icon="slack" href="/integrations/slack-alerts">
-  Get notified in Slack when a BREAKING check is detected.
-</Card>
+## What a Passing Check Looks Like
+```text
+DriftGuard result: pass (severity: 0)
+✅ Schema check passed.
+```
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Set up Slack Alerts" icon="slack" href="/integrations/slack-alerts">
+    Get notified in Slack when a breaking check is detected.
+  </Card>
+  <Card title="Webhooks" icon="bell" href="/integrations/webhooks">
+    Register a webhook to receive check results automatically.
+  </Card>
+</CardGroup>

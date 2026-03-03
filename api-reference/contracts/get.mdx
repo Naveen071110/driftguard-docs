@@ -1,13 +1,11 @@
-# Get Contract
-
-Fetch a single contract by its `contract_id`.
-
+---
+title: "Get Contract"
+description: "Fetch a single contract by its ID."
 ---
 
 ## Endpoint
-
 ```http
-GET /v1/contracts/{contract_id}
+GET /api/v1/contracts/{id}
 Host: api.driftguard.dev
 ```
 
@@ -15,38 +13,69 @@ Host: api.driftguard.dev
 
 ## Path Parameters
 
-| Name          | Description                           |
-| ------------- | ------------------------------------- |
-| `contract_id` | ID returned from `POST /v1/contracts` |
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string | Yes | The contract ID returned by `POST /api/v1/contracts` |
 
 ---
 
-## Example
-
+## Request
 ```bash
-curl -s https://api.driftguard.dev/v1/contracts/ctr_01HX7KMQZP \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY"
+curl -s https://api.driftguard.dev/api/v1/contracts/your_contract_id_here \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
 ```
 
-### Response
+---
 
+## Response
 ```json
 {
-  "contract_id": "ctr_01HX7KMQZP",
+  "id": "your_contract_id_here",
   "name": "users_production",
   "version": 1,
-  "columns": [...],
-  "rules": {...},
-  "created_at": "2026-02-27T18:00:00Z",
-  "updated_at": "2026-02-27T18:00:00Z"
+  "schema": {
+    "columns": [
+      { "name": "user_id",    "type": "integer",   "required": true },
+      { "name": "email",      "type": "string",    "required": true },
+      { "name": "created_at", "type": "timestamp", "required": true }
+    ]
+  },
+  "created_at": "2026-03-01T18:00:00Z",
+  "updated_at": "2026-03-01T18:00:00Z"
 }
 ```
 
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for the contract |
+| `name` | string | The name given to the contract |
+| `version` | integer | Current version number — increments each time the contract schema is updated |
+| `schema.columns` | array | Full list of column definitions as saved |
+| `schema.columns[].name` | string | Column name (case-sensitive) |
+| `schema.columns[].type` | string | Column type — one of `string`, `integer`, `number`, `boolean`, `date`, `timestamp`, `json` |
+| `schema.columns[].required` | boolean | Whether the column must be present in every check |
+| `created_at` | string | ISO 8601 timestamp of when the contract was created |
+| `updated_at` | string | ISO 8601 timestamp of the last update |
+
 ---
 
-## Errors
+## Error Responses
 
-| Code  | Description          |
-| ----- | -------------------- |
-| `401` | Unauthorized         |
-| `404` | Contract not found   |
+| Status | Meaning |
+|--------|---------|
+| `401` | Missing or invalid `X-API-Key` |
+| `404` | Contract not found, or belongs to a different user |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<CardGroup cols={2}>
+  <Card title="List Contracts" icon="list" href="/api-reference/contracts/list">
+    Retrieve all contracts on your account.
+  </Card>
+  <Card title="Run a Check" icon="play" href="/api-reference/checks/run">
+    Use this contract ID to run a schema check.
+  </Card>
+</CardGroup>

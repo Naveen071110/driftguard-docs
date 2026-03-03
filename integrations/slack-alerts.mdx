@@ -1,6 +1,18 @@
-# Slack Alerts
+---
+title: "Slack Alerts"
+description: "Send DriftGuard check results to a Slack channel using Incoming Webhooks."
+---
 
-Configure DriftGuard to send a Slack notification whenever a schema check returns `BREAKING` or `WARNING`.
+Get notified in Slack whenever a schema check returns `breaking` or `warning`.
+DriftGuard delivers check results to any HTTPS endpoint — including Slack Incoming Webhooks.
+
+<Note>
+  DriftGuard delivers the raw check result JSON to your Slack webhook URL.
+  Slack will display this as a formatted code block. If you want rich Slack
+  message formatting (blocks, colours, fields), add a small middleware function
+  between DriftGuard and Slack — see [Step 4](#step-4-optional-format-the-slack-message)
+  below.
+</Note>
 
 ---
 
@@ -8,59 +20,158 @@ Configure DriftGuard to send a Slack notification whenever a schema check return
 
 1. Go to [api.slack.com/apps](https://api.slack.com/apps)
 2. Click **Create New App → From scratch**
-3. Name it `DriftGuard Alerts`, select your workspace
-4. In **Incoming Webhooks**, toggle **On**
+3. Name it `DriftGuard Alerts` and select your workspace
+4. Under **Incoming Webhooks**, toggle **Activate Incoming Webhooks** to **On**
 5. Click **Add New Webhook to Workspace**
-6. Choose the channel (e.g. `#data-alerts`)
+6. Select the channel (e.g. `#data-alerts`) and click **Allow**
 7. Copy the webhook URL — it looks like:
    `https://hooks.slack.com/services/T.../B.../xxx`
 
 ---
 
 ## Step 2: Register the Webhook with DriftGuard
-
 ```bash
-curl -s -X POST https://api.driftguard.dev/v1/webhooks \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+curl -s -X POST https://api.driftguard.dev/api/v1/webhooks \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Slack data-alerts channel",
-    "target_url": "https://hooks.slack.com/services/T.../B.../xxx",
-    "event_types": ["BREAKING", "WARNING"],
+    "url": "https://hooks.slack.com/services/T.../B.../xxx",
+    "events": ["breaking", "warning"],
     "contract_id": null
   }'
 ```
 
----
-
-## Step 3: See the Alert in Slack
-
-When a check is `BREAKING` or `WARNING`, DriftGuard sends a message:
-
-```text
-🔴 DriftGuard — BREAKING change detected
-Contract:  users_production
-Check ID:  chk_01HX7KN123
-Time:      2026-02-28 00:14 UTC
-
-Changes:
-  ✗ email       REMOVED       Required column missing
-  △ created_at  TYPE_CHANGED  timestamp → string
-
-2 breaking · 0 warning · 1 ok
+Save the `id` and `secret` from the response:
+```json
+{
+  "id": "your_webhook_id_here",
+  "url": "https://hooks.slack.com/services/T.../B.../xxx",
+  "events": ["breaking", "warning"],
+  "contract_id": null,
+  "active": true,
+  "secret": "whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "created_at": "2026-03-01T19:22:00Z"
+}
 ```
 
-You can change which statuses trigger alerts by editing `event_types`:
+<Warning>
+  The `secret` is shown only once. Store it securely — you'll need it to verify
+  payloads if you add a middleware layer in Step 4.
+</Warning>
 
-- `["BREAKING"]` — only critical incidents
-- `["BREAKING", "WARNING"]` — all drift
+To scope alerts to a single contract instead of all contracts, pass its `id`
+as `contract_id`:
+```bash
+-d '{
+  "url": "https://hooks.slack.com/services/T.../B.../xxx",
+  "events": ["breaking"],
+  "contract_id": "your_contract_id_here"
+}'
+```
 
 ---
 
-<Info>
-  To stop alerts, either delete the webhook from your DriftGuard dashboard or set `active: false` via the API.
-</Info>
+## Step 3: What Arrives in Slack
 
-<Card title="Use Generic Webhooks" icon="code" href="/integrations/webhooks">
-  Send the same payloads to your own backend or alerting system.
-</Card>
+When a check matches your `events` list, DriftGuard POSTs the check result
+JSON directly to your Slack webhook URL. Slack displays it as a code block:
+```json
+{
+  "id": "your_check_id_here",
+  "contract_id": "your_contract_id_here",
+  "result": "breaking",
+  "severity": 70,
+  "diff": {
+    "removed": ["email"],
+    "type_changes": [
+      { "column": "created_at", "from": "timestamp", "to": "string" }
+    ],
+    "added": []
+  },
+  "credits_used": 1,
+  "created_at": "2026-03-01T18:00:14Z"
+}
+```
+
+DriftGuard will retry delivery up to **3 times** (immediately, then after 5s,
+then after 25s) if Slack doesn't return a `2xx` response.
+
+---
+
+## Step 4 (Optional): Format the Slack Message
+
+To get rich Slack formatting, deploy a small function that receives the
+DriftGuard payload and reformats it as a Slack Block Kit message before
+forwarding to Slack.
+
+Here's a minimal example using Python:
+```python
+from flask import Flask, request, jsonify
+import requests
+import hmac, hashlib
+
+app = Flask(__name__)
+
+SLACK_WEBHOOK = "https://hooks.slack.com/services/T.../B.../xxx"
+DRIFTGUARD_SECRET = "whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+def verify(payload: bytes, sig: str) -> bool:
+    expected = hmac.new(
+        DRIFTGUARD_SECRET.encode(), payload, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, sig)
+
+@app.route("/driftguard-hook", methods=["POST"])
+def hook():
+    if not verify(request.data, request.headers.get("X-DriftGuard-Signature", "")):
+        return "Unauthorized", 401
+
+    data = request.json
+    result = data.get("result", "unknown")
+    severity = data.get("severity", 0)
+    removed = data.get("diff", {}).get("removed", [])
+    type_changes = data.get("diff", {}).get("type_changes", [])
+
+    icon = "🔴" if result == "breaking" else "⚠️" if result == "warning" else "✅"
+
+    text = (
+        f"{icon} *DriftGuard — {result.upper()}* (severity: {severity})\n"
+        f"Contract: `{data.get('contract_id')}`\n"
+        f"Check ID: `{data.get('id')}`\n"
+    )
+    if removed:
+        text += f"Removed columns: {', '.join(f'`{c}`' for c in removed)}\n"
+    if type_changes:
+        for tc in type_changes:
+            text += f"Type changed: `{tc['column']}` {tc['from']} → {tc['to']}\n"
+
+    requests.post(SLACK_WEBHOOK, json={"text": text})
+    return jsonify({"ok": True})
+```
+
+Point your DriftGuard webhook at this function's URL instead of the Slack
+webhook URL directly.
+
+---
+
+## Stopping Alerts
+
+To stop receiving Slack alerts, delete the webhook via the API:
+```bash
+curl -s -X DELETE https://api.driftguard.dev/api/v1/webhooks/your_webhook_id_here \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
+```
+
+To change which events trigger alerts, delete the existing webhook and
+create a new one with the updated `events` list.
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Webhooks Guide" icon="bell" href="/integrations/webhooks">
+    Full webhook documentation including signature verification and retry behaviour.
+  </Card>
+  <Card title="Create Webhook" icon="plus" href="/api-reference/webhooks/create">
+    Full API reference for registering webhooks.
+  </Card>
+</CardGroup>

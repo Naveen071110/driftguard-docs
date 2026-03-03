@@ -1,41 +1,78 @@
-# Get Usage
-
-Returns your current plan, credits, and rate limits.
-
+---
+title: "Get Usage"
+description: "Returns your remaining credits and total checks run on your account."
 ---
 
 ## Endpoint
-
 ```http
-GET /v1/usage
+GET /api/v1/usage
 Host: api.driftguard.dev
 ```
 
 ---
 
-## Example
-
+## Request
 ```bash
-curl -s https://api.driftguard.dev/v1/usage \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY"
-```
-
-### Response
-
-```json
-{
-  "plan": "starter",
-  "credits_total": 500,
-  "credits_used": 23,
-  "credits_remaining": 477,
-  "period_start": "2026-02-01T00:00:00Z",
-  "period_end": "2026-02-29T23:59:59Z",
-  "rate_limit_per_minute": 60
-}
+curl -s https://api.driftguard.dev/api/v1/usage \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
 ```
 
 ---
 
+## Response
+```json
+{
+  "credits_remaining": 477,
+  "credits_used": 23,
+  "total_checks": 23
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `credits_remaining` | integer | Credits currently available on your account. Each [POST /api/v1/check](/api-reference/checks/run) deducts 1 credit. |
+| `credits_used` | integer | Total credits consumed so far |
+| `total_checks` | integer | Total number of schema checks run on your account |
+
 <Note>
-  Use this endpoint to build dashboards or alerts around credit usage.
+  Credits never expire. Top up anytime from
+  [driftguard.dev](https://driftguard.dev/#waitlist).
 </Note>
+
+---
+
+## Rate Limits
+
+The DriftGuard API allows **100 requests per minute** per API key across all endpoints.
+When exceeded, you'll receive a `429 Too Many Requests` response.
+
+If your `credits_remaining` reaches `0`, all calls to
+[POST /api/v1/check](/api-reference/checks/run) will return `403 Forbidden`
+until your account is topped up.
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `401` | Missing or invalid `X-API-Key` |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<Note>
+  Use this endpoint to build dashboards or alerting around credit consumption.
+  Poll it after each check run to track depletion in real time.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Run a Check" icon="play" href="/api-reference/checks/run">
+    Each check call costs 1 credit — see what triggers deductions.
+  </Card>
+  <Card title="Authentication" icon="key" href="/authentication">
+    Learn about API key types, rate limits, and key management.
+  </Card>
+</CardGroup>

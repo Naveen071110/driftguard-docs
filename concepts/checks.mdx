@@ -1,122 +1,157 @@
-# Checks
+---
+title: "Checks"
+description: "A check is a single evaluation of an incoming schema against a saved contract."
+---
 
-A **check** is a single evaluation of an incoming schema against a stored contract. You run a check by POSTing the incoming schema to `POST /v1/checks`. DriftGuard compares it against the contract and returns a verdict.
+A **check** is a single evaluation of an incoming schema against a stored contract.
+You run a check by POSTing to `POST /api/v1/check`. DriftGuard compares the incoming
+columns against the contract and returns an instant verdict.
 
 **One check = one credit.**
 
 ---
 
 ## What You Send
-
-```json
-{
-  "contract_id": "ctr_01HX7KMQZP",
-  "incoming_schema": [
-    { "name": "user_id",    "type": "string"  },
-    { "name": "created_at", "type": "string"  },
-    { "name": "new_field",  "type": "integer" }
-  ],
-  "source": "ci"
-}
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/check \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contract_id": "your_contract_id_here",
+    "incoming_schema": {
+      "columns": [
+        { "name": "user_id",    "type": "integer" },
+        { "name": "created_at", "type": "string"  },
+        { "name": "new_field",  "type": "integer" }
+      ]
+    }
+  }'
 ```
 
-| Field             | Required | Description                                              |
-| ----------------- | -------- | -------------------------------------------------------- |
-| `contract_id`     | ✅        | The contract to check against                            |
-| `incoming_schema` | ✅        | Array of column objects from your actual data            |
-| `source`          | ❌        | Tag for filtering history: `ci`, `pipeline`, `manual`    |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `contract_id` | ✅ | The ID of the contract to check against |
+| `incoming_schema.columns` | ✅ | Array of column objects from your actual data source |
+| `incoming_schema.columns[].name` | ✅ | Column name (case-sensitive) |
+| `incoming_schema.columns[].type` | ✅ | One of `string`, `integer`, `number`, `boolean`, `date`, `timestamp`, `json` |
 
 ---
 
 ## What You Get Back
-
 ```json
 {
-  "check_id": "chk_01HX7KN...",
-  "status": "BREAKING",
-  "summary": {
-    "breaking": 2,
-    "warning": 1,
-    "ok": 1
+  "id": "your_check_id_here",
+  "contract_id": "your_contract_id_here",
+  "result": "breaking",
+  "severity": 75,
+  "diff": {
+    "removed": ["email"],
+    "type_changes": [
+      { "column": "created_at", "from": "timestamp", "to": "string" }
+    ],
+    "added": ["new_field"]
   },
-  "diff": [
-    {
-      "column": "email",
-      "change": "REMOVED",
-      "severity": "BREAKING",
-      "message": "Required column 'email' is missing from incoming schema."
-    },
-    {
-      "column": "created_at",
-      "change": "TYPE_CHANGED",
-      "from_type": "timestamp",
-      "to_type": "string",
-      "severity": "BREAKING",
-      "message": "Narrowing type change. Downstream casts will fail."
-    },
-    {
-      "column": "new_field",
-      "change": "ADDED",
-      "severity": "WARNING",
-      "message": "New column detected. allow_additional_columns is false."
-    }
-  ],
-  "evaluated_at": "2026-02-28T00:14:00Z",
-  "credits_used": 1
+  "credits_used": 1,
+  "created_at": "2026-03-01T18:00:14Z"
 }
 ```
 
----
-
-## The `status` Field
-
-The top-level `status` is always one of three values:
-
-| Status     | Meaning                                                               |
-| ---------- | --------------------------------------------------------------------- |
-| `OK`       | Incoming schema fully matches the contract. Safe to proceed.          |
-| `WARNING`  | Schema has changes that may cause issues. Review recommended.         |
-| `BREAKING` | Schema has changes that will break downstream consumers. Block this.  |
-
-**Rule:** `status` reflects the highest severity found in the diff. If even one change is `BREAKING`, the overall status is `BREAKING`.
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique check ID — use with [GET /api/v1/checks/{id}](/api-reference/checks/get) to retrieve later |
+| `contract_id` | string | The contract this check was run against |
+| `result` | string | `pass`, `warning`, or `breaking` — see below |
+| `severity` | integer | Score from 0–100 — see [Severity Levels](/concepts/severity-levels) |
+| `diff.removed` | array | Column names present in the contract but missing from incoming schema |
+| `diff.type_changes` | array | Columns whose type changed, with `from` and `to` values |
+| `diff.added` | array | Column names present in incoming schema but not in the contract |
+| `credits_used` | integer | Always `1` |
+| `created_at` | string | ISO 8601 timestamp of when the check was run |
 
 ---
 
-## Change Types in the Diff
+## The `result` Field
 
-| Change                | Description                                                  |
-| --------------------- | ------------------------------------------------------------ |
-| `REMOVED`             | Column exists in contract but missing from incoming schema   |
-| `ADDED`               | Column exists in incoming schema but not in contract         |
-| `TYPE_CHANGED`        | Column exists in both but type differs                       |
-| `NULLABILITY_CHANGED` | Column exists in both but nullable flag differs              |
-| `NO_CHANGE`           | Column matches exactly                                       |
+The top-level `result` is always one of three values:
+
+| Result | Severity Range | Meaning |
+|--------|---------------|---------|
+| `pass` | 0 – 19 | Incoming schema matches the contract. Safe to proceed. |
+| `warning` | 20 – 89 | Drift detected — may cause issues. Review recommended. |
+| `breaking` | 90 – 100 | Drift will break downstream consumers. Block this. |
+
+The `result` is derived from the `severity` score, not computed separately.
+If your score lands at 90 or above, the result is always `breaking`.
 
 ---
 
-## Using `status` in CI
+## How the Severity Score is Calculated
 
-The `status` field is designed to be machine-readable:
+Every difference found between the incoming schema and the contract contributes
+points to the severity score. The score is capped at 100.
 
+| Change Type | Points |
+|-------------|--------|
+| Required column removed | +40 |
+| Optional column removed | +20 |
+| Column type changed | +30 per column |
+| New column added | +5 per column |
+
+**Example:** A check where 1 required column is removed and 1 type change is found
+scores `40 + 30 = 70` → `warning`.
+
+---
+
+## Change Types Explained
+
+| Change | What it means |
+|--------|---------------|
+| **Removed** | A column defined in the contract is missing from the incoming schema entirely |
+| **Type changed** | A column exists in both but its type differs (e.g. `timestamp → string`) |
+| **Added** | A column exists in the incoming schema but was not defined in the contract |
+
+---
+
+## Using `result` in CI
+
+The `result` field is machine-readable and designed for use in CI pipelines:
 ```bash
-STATUS=$(curl -s -X POST https://api.driftguard.dev/v1/checks \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+RESULT=$(curl -s -X POST https://api.driftguard.dev/api/v1/check \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"contract_id":"ctr_xxx","incoming_schema":[...]}' \
-  | jq -r '.status')
+  -d '{
+    "contract_id": "your_contract_id_here",
+    "incoming_schema": {
+      "columns": [
+        { "name": "user_id", "type": "integer" },
+        { "name": "email",   "type": "string"  }
+      ]
+    }
+  }' | jq -r '.result')
 
-echo "DriftGuard result: $STATUS"
-[ "$STATUS" != "BREAKING" ] || exit 1
+echo "DriftGuard result: $RESULT"
+[ "$RESULT" != "breaking" ] || exit 1
 ```
+
+<Tip>
+  You can also fail on `warning` by changing the condition to
+  `[ "$RESULT" = "pass" ] || exit 1` for stricter pipelines.
+</Tip>
 
 ---
 
 ## Check History
 
-Every check is stored for 7–90 days depending on your plan. Retrieve past checks with `GET /v1/checks/{id}`.
+Every check result is stored and retrievable by ID.
+Use [GET /api/v1/checks/{id}](/api-reference/checks/get) to fetch a past check.
 
 ---
 
-<Card title="See Severity Rules" icon="triangle-exclamation" href="/concepts/severity-levels">
-  Understand exactly what makes a change BREAKING vs WARNING.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Severity Levels" icon="gauge" href="/concepts/severity-levels">
+    Understand exactly how the 0–100 score maps to pass, warning, and breaking.
+  </Card>
+  <Card title="Run a Check" icon="play" href="/api-reference/checks/run">
+    Full API reference for POST /api/v1/check.
+  </Card>
+</CardGroup>

@@ -1,109 +1,202 @@
-# Generic Webhooks
+---
+title: "Webhooks"
+description: "Send DriftGuard check results to any HTTPS endpoint — your own backend, PagerDuty, or a custom alerting pipeline."
+---
 
-In addition to Slack, you can send DriftGuard check results to any HTTP endpoint — your own backend, PagerDuty, a monitoring system, or a custom incident pipeline.
+In addition to Slack, you can deliver DriftGuard check results to any HTTPS
+endpoint — your own backend, PagerDuty, a monitoring system, or a custom
+incident pipeline.
 
 ---
 
 ## Register a Webhook
-
 ```bash
-curl -s -X POST https://api.driftguard.dev/v1/webhooks \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
+curl -s -X POST https://api.driftguard.dev/api/v1/webhooks \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "My pipeline alert",
-    "target_url": "https://your-app.com/webhooks/driftguard",
-    "event_types": ["BREAKING"],
-    "contract_id": "ctr_01HX7KMQZP"
+    "url": "https://your-app.com/webhooks/driftguard",
+    "events": ["breaking"],
+    "contract_id": "your_contract_id_here"
   }'
 ```
 
-| Field         | Required | Description                                    |
-| ------------- | -------- | ---------------------------------------------- |
-| `name`        | ❌        | Friendly label for this webhook                |
-| `target_url`  | ✅        | URL to which DriftGuard will POST results      |
-| `event_types` | ✅        | Array of statuses to send: `BREAKING`, `WARNING` |
-| `contract_id` | ❌        | Limit to one contract; `null` for all contracts |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `url` | ✅ | HTTPS URL DriftGuard will POST check results to. HTTP is rejected. |
+| `events` | ✅ | Array of result types that trigger delivery: `breaking`, `warning`, `pass` |
+| `contract_id` | ❌ | Scope to a single contract ID, or `null` to fire for all contracts |
 
----
+<Warning>
+  The `url` must use HTTPS. HTTP endpoints will be rejected with a `400` error.
+</Warning>
 
-## Payload Format
-
-When a check completes with a status included in `event_types`, DriftGuard sends a POST request to your `target_url`:
-
+Save the `id` and `secret` from the response — the `secret` is shown only once:
 ```json
 {
-  "event": "check.completed",
-  "check_id": "chk_01HX7KN123",
-  "status": "BREAKING",
-  "contract_id": "ctr_01HX7KMQZP",
-  "contract_name": "users_production",
-  "summary": {
-    "breaking": 2,
-    "warning": 1,
-    "ok": 14
-  },
-  "diff": [
-    {
-      "column": "email",
-      "change": "REMOVED",
-      "severity": "BREAKING",
-      "message": "Required column 'email' is missing from incoming schema."
-    }
-  ],
-  "evaluated_at": "2026-02-28T00:14:00Z"
+  "id": "your_webhook_id_here",
+  "url": "https://your-app.com/webhooks/driftguard",
+  "events": ["breaking"],
+  "contract_id": "your_contract_id_here",
+  "active": true,
+  "secret": "whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "created_at": "2026-03-01T19:22:00Z"
 }
 ```
 
 ---
 
-## Securing Webhooks
+## Payload Format
 
-Every webhook request includes a signature header so you can verify that it came from DriftGuard:
-
-```text
-X-DriftGuard-Signature: t=1709097600,v1=hex_hmac_signature
+When a check completes with a `result` that matches your `events` list,
+DriftGuard POSTs the full check result JSON to your endpoint:
+```json
+{
+  "id": "your_check_id_here",
+  "contract_id": "your_contract_id_here",
+  "result": "breaking",
+  "severity": 70,
+  "diff": {
+    "removed": ["email"],
+    "type_changes": [
+      { "column": "created_at", "from": "timestamp", "to": "string" }
+    ],
+    "added": []
+  },
+  "credits_used": 1,
+  "created_at": "2026-03-01T18:00:14Z"
+}
 ```
 
-To verify:
+Your endpoint must return a `2xx` response to confirm receipt.
 
-1. Concatenate the timestamp (`t`) and raw request body with a `.`: `t.body`
-2. Compute an HMAC SHA256 using your webhook secret
-3. Compare the hex digest to `v1` in constant time
+---
 
-Webhook secrets are generated per webhook and visible once when you create them in the dashboard.
+## Verifying Webhook Signatures
+
+Every delivery includes an `X-DriftGuard-Signature` header containing an
+HMAC-SHA256 hex digest of the raw request body, signed with your webhook `secret`.
+
+Always verify this signature before trusting or acting on the payload.
+```python
+import hmac
+import hashlib
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+WEBHOOK_SECRET = "whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+def verify_signature(payload: bytes, signature: str) -> bool:
+    expected = hmac.new(
+        WEBHOOK_SECRET.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+
+@app.route("/webhooks/driftguard", methods=["POST"])
+def handle():
+    sig = request.headers.get("X-DriftGuard-Signature", "")
+
+    if not verify_signature(request.data, sig):
+        return "Unauthorized", 401
+
+    payload = request.json
+    result = payload.get("result")
+    severity = payload.get("severity")
+
+    print(f"DriftGuard check result: {result} (severity: {severity})")
+
+    # Your alerting logic here
+
+    return jsonify({"ok": True})
+```
+```javascript
+// Node.js / Express example
+const crypto = require("crypto");
+
+function verifySignature(rawBody, signature, secret) {
+  const expected = crypto
+    .createHmac("sha256", secret)
+    .update(rawBody)
+    .digest("hex");
+  return crypto.timingSafeEqual(
+    Buffer.from(expected),
+    Buffer.from(signature)
+  );
+}
+
+app.post("/webhooks/driftguard", express.raw({ type: "application/json" }), (req, res) => {
+  const sig = req.headers["x-driftguard-signature"] || "";
+
+  if (!verifySignature(req.body, sig, process.env.WEBHOOK_SECRET)) {
+    return res.status(401).send("Unauthorized");
+  }
+
+  const payload = JSON.parse(req.body);
+  console.log("Result:", payload.result, "Severity:", payload.severity);
+
+  res.json({ ok: true });
+});
+```
 
 <Warning>
-  Always validate the signature and timestamp before trusting any webhook request. Reject requests older than 5 minutes.
+  Always use a constant-time comparison (`hmac.compare_digest` in Python,
+  `crypto.timingSafeEqual` in Node.js) to prevent timing attacks.
 </Warning>
 
 ---
 
+## Delivery and Retries
+
+DriftGuard delivers payloads in a background thread with automatic retries
+if your endpoint does not return a `2xx` response:
+
+| Attempt | Timing |
+|---------|--------|
+| 1st (initial) | Immediate |
+| 2nd retry | 5 seconds after failure |
+| 3rd retry | 25 seconds after failure |
+
+After 3 failed attempts the delivery is abandoned for that check.
+Ensure your endpoint responds quickly — long-running logic should be handled
+asynchronously after returning `200`.
+
+---
+
 ## Listing Webhooks
-
 ```bash
-curl -s https://api.driftguard.dev/v1/webhooks \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY"
+curl -s https://api.driftguard.dev/api/v1/webhooks \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
 ```
-
-### Response
-
 ```json
 [
   {
-    "webhook_id": "wh_01HX8ABCD",
-    "name": "Slack data-alerts channel",
-    "target_url": "https://hooks.slack.com/...",
-    "event_types": ["BREAKING", "WARNING"],
-    "contract_id": null,
-    "created_at": "2026-02-27T19:22:00Z",
-    "active": true
+    "id": "your_webhook_id_here",
+    "url": "https://your-app.com/webhooks/driftguard",
+    "events": ["breaking"],
+    "contract_id": "your_contract_id_here",
+    "active": true,
+    "created_at": "2026-03-01T19:22:00Z"
   }
 ]
 ```
 
 ---
 
-<Card title="API Reference" icon="code" href="/api-reference/webhooks/create">
-  See the full webhook API reference.
-</Card>
+## Deleting a Webhook
+```bash
+curl -s -X DELETE https://api.driftguard.dev/api/v1/webhooks/your_webhook_id_here \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
+```
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Create Webhook" icon="plus" href="/api-reference/webhooks/create">
+    Full API reference for registering webhooks.
+  </Card>
+  <Card title="Slack Alerts" icon="slack" href="/integrations/slack-alerts">
+    Point a webhook at Slack for instant drift notifications.
+  </Card>
+</CardGroup>

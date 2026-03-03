@@ -1,11 +1,24 @@
-# Rules
+---
+title: "Rules"
+description: "Contract-level rules for customising how DriftGuard evaluates schema changes."
+---
 
-Rules let you customize how DriftGuard evaluates schema changes for a specific contract. Set them in the `rules` object when creating or updating a contract.
+<Warning>
+  Contract rules are **not yet implemented** in the current version of DriftGuard.
+  The severity scoring described in this section reflects planned behaviour.
+  Today, all checks use the default scoring logic regardless of any rules you define.
+  See [Severity Levels](/concepts/severity-levels) for the current fixed scoring formula.
+</Warning>
 
 ---
 
-## Available Rules
+Rules will let you customise how DriftGuard evaluates schema changes on a
+per-contract basis. Once implemented, you'll set them in the `schema` object
+when creating a contract.
 
+---
+
+## Planned Rules
 ```json
 {
   "rules": {
@@ -15,19 +28,18 @@ Rules let you customize how DriftGuard evaluates schema changes for a specific c
 }
 ```
 
-| Rule                          | Type      | Default | Description                                                                             |
-| ----------------------------- | --------- | ------- | --------------------------------------------------------------------------------------- |
-| `allow_additional_columns`    | `boolean` | `false` | If `true`, new columns in incoming schema are classified as `OK` instead of `WARNING`   |
-| `treat_renames_as_breaking`   | `boolean` | `true`  | If `true`, detected renames are classified as `BREAKING`. If `false`, as `WARNING`      |
+| Rule | Type | Planned Default | Description |
+|------|------|-----------------|-------------|
+| `allow_additional_columns` | boolean | `false` | If `true`, new columns in the incoming schema will not contribute to the severity score. If `false`, each new column adds **+5 points**. |
+| `treat_renames_as_breaking` | boolean | `true` | If `true`, a detected rename is treated as a removal (+40) plus an addition (+5). If `false`, it adds fewer points. |
 
 ---
 
-## Rule Examples
+## Planned Rule Behaviour
 
-### Strict Contract (Default)
+### Strict Contract (Planned Default)
 
-Use this for production tables where any unexpected change should be flagged:
-
+Recommended for production tables where any unexpected change should be flagged:
 ```json
 {
   "rules": {
@@ -37,13 +49,13 @@ Use this for production tables where any unexpected change should be flagged:
 }
 ```
 
-- New columns → `WARNING`
-- Renames → `BREAKING`
+- New columns → contribute **+5 points** each toward severity
+- Renames → treated as a removal + addition, pushing toward `breaking`
 
 ### Flexible Contract
 
-Use this for partner feeds or raw ingestion layers where extra columns are expected and acceptable:
-
+Recommended for partner feeds or raw ingestion layers where extra columns
+are expected and acceptable:
 ```json
 {
   "rules": {
@@ -53,11 +65,10 @@ Use this for partner feeds or raw ingestion layers where extra columns are expec
 }
 ```
 
-- New columns → `OK`
-- Renames → `WARNING`
+- New columns → **ignored**, no severity points added
+- Renames → treated more leniently
 
 ### Recommended for dbt Models
-
 ```json
 {
   "rules": {
@@ -67,23 +78,47 @@ Use this for partner feeds or raw ingestion layers where extra columns are expec
 }
 ```
 
-dbt model outputs should be fully predictable. Any unexpected change in shape should be a `WARNING` at minimum.
+dbt model outputs should be fully predictable. Any unexpected column addition
+or rename should contribute to severity scoring.
+
+---
+
+## Current Behaviour (No Rules)
+
+Until rules are implemented, all checks use this fixed scoring formula regardless
+of contract configuration:
+
+| Change Type | Points |
+|-------------|--------|
+| Required column removed | +40 |
+| Optional column removed | +20 |
+| Column type changed | +30 per column |
+| New column added | +5 per column |
+| Score capped at | 100 |
+
+See [Severity Levels](/concepts/severity-levels) for how the score maps to
+`pass`, `warning`, and `breaking`.
 
 ---
 
 <Info>
-  Per-column severity overrides are on the roadmap for v0.2. This will let you mark specific columns as `ignore`, `warning-only`, or `breaking-only` regardless of change type.
+  Per-column severity overrides are also on the roadmap — this will let you mark
+  specific columns as `ignore`, `warning-only`, or `breaking-only` regardless
+  of change type.
 </Info>
+
+<Note>
+  Want to be notified when rules go live?
+  Watch the [Changelog](/changelog) or follow [@naveenbale](https://twitter.com/naveenbale) on X.
+</Note>
 
 ---
 
-## Next Steps
-
 <CardGroup cols={2}>
-  <Card title="API: Create Contract" icon="code" href="/api-reference/contracts/create">
-    See the full contract creation endpoint with all parameters.
+  <Card title="Severity Levels" icon="gauge" href="/concepts/severity-levels">
+    See the current fixed severity scoring formula in full detail.
   </Card>
-  <Card title="Severity Levels" icon="triangle-exclamation" href="/concepts/severity-levels">
-    See the full default severity matrix.
+  <Card title="Create Contract" icon="plus" href="/api-reference/contracts/create">
+    Create a contract with the current supported fields.
   </Card>
 </CardGroup>

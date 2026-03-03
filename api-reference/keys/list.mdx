@@ -1,0 +1,79 @@
+---
+title: "List API Keys"
+description: "Retrieve all API keys associated with your account."
+---
+
+## Endpoint
+```http
+GET /api/v1/keys
+Host: api.driftguard.dev
+```
+
+---
+
+## Request
+```bash
+curl -s https://api.driftguard.dev/api/v1/keys \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
+```
+
+---
+
+## Response
+```json
+[
+  {
+    "id": "your_key_id_here",
+    "key_preview": "dg_live_xxxxxxxx",
+    "environment": "live",
+    "is_active": true,
+    "created_at": "2026-03-01T12:00:00Z",
+    "last_used_at": "2026-03-01T18:00:00Z"
+  },
+  {
+    "id": "your_second_key_id_here",
+    "key_preview": "dg_test_xxxxxxxx",
+    "environment": "test",
+    "is_active": false,
+    "created_at": "2026-02-15T09:00:00Z",
+    "last_used_at": "2026-02-20T14:00:00Z"
+  }
+]
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for this key — use it for revoke, activate, and delete operations |
+| `key_preview` | string | First 16 characters of the key — for identification only |
+| `environment` | string | `live` or `test` |
+| `is_active` | boolean | Whether this key can currently authenticate requests |
+| `created_at` | string | ISO 8601 timestamp of when the key was created |
+| `last_used_at` | string | ISO 8601 timestamp of the last successful request made with this key |
+
+<Note>
+  Full key values are **never returned** by this endpoint. The complete key
+  is only shown once at creation via [POST /api/v1/keys](/api-reference/keys/create).
+  If you have lost a key, revoke it and create a new one.
+</Note>
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `401` | Missing or invalid `X-API-Key` |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Create Key" icon="plus" href="/api-reference/keys/create">
+    Generate a new API key for your account.
+  </Card>
+  <Card title="Revoke Key" icon="ban" href="/api-reference/keys/revoke">
+    Deactivate a key to stop it authenticating requests.
+  </Card>
+</CardGroup>

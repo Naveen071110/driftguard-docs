@@ -1,33 +1,70 @@
-# Delete Contract
-
-Archives a contract. Archived contracts no longer accept new checks but remain in history for audit purposes.
-
+---
+title: "Delete Contract"
+description: "Permanently delete a contract from your account."
 ---
 
-## Endpoint
+<Warning>
+  This endpoint is not yet available. It is planned for a future release.
+  If you need to stop checks running against a contract in the meantime,
+  simply stop passing its `id` to [POST /api/v1/check](/api-reference/checks/run).
+</Warning>
 
+## Endpoint
 ```http
-DELETE /v1/contracts/{contract_id}
+DELETE /api/v1/contracts/{id}
 Host: api.driftguard.dev
 ```
 
 ---
 
-## Example
+## Planned Behaviour
 
-```bash
-curl -s -X DELETE https://api.driftguard.dev/v1/contracts/ctr_01HX7KMQZP \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY"
+Once available, this endpoint will:
+
+- Permanently delete the contract and all its stored schema definitions
+- Return `404` on any future `GET` or check request using its `id`
+- **Not** delete historical check results that were run against this contract — those remain retrievable via [GET /api/v1/checks/{id}](/api-reference/checks/get)
+
+---
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string | Yes | The contract ID to delete |
+
+---
+
+## Planned Response
+```json
+{
+  "id": "your_contract_id_here",
+  "deleted": true
+}
 ```
 
 ---
 
-## Response
+## Planned Error Responses
 
-```json
-{
-  "contract_id": "ctr_01HX7KMQZP",
-  "archived": true,
-  "archived_at": "2026-02-28T10:00:00Z"
-}
-```
+| Status | Meaning |
+|--------|---------|
+| `401` | Missing or invalid `X-API-Key` |
+| `404` | Contract not found, or belongs to a different user |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<Note>
+  Want to be notified when this endpoint goes live?
+  Watch the [Changelog](/changelog) or follow [@naveenbale](https://twitter.com/naveenbale) on X.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="List Contracts" icon="list" href="/api-reference/contracts/list">
+    View all contracts currently active on your account.
+  </Card>
+  <Card title="Get Contract" icon="file-magnifying-glass" href="/api-reference/contracts/get">
+    Retrieve a single contract by its ID.
+  </Card>
+</CardGroup>

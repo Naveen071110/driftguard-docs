@@ -1,102 +1,170 @@
-# Severity Levels
+---
+title: "Severity Levels"
+description: "How DriftGuard scores schema drift and maps it to pass, warning, or breaking."
+---
 
-Every change DriftGuard detects gets a severity level. Understanding what triggers each level helps you configure contracts correctly and reduce false positives.
+DriftGuard evaluates every schema check by calculating a **severity score from 0 to 100**.
+Each type of change contributes a fixed number of points. The total score determines
+the final `result` returned in the check response.
 
 ---
 
-## The Three Levels
+## The Three Results
 
 <CardGroup cols={3}>
-  <Card title="BREAKING" icon="circle-xmark" iconType="solid" color="#FF4D4D">
-    Will cause downstream failures. Block the pipeline or fail CI.
+  <Card title="breaking" icon="circle-xmark" iconType="solid" color="#ef4444">
+    Score 90–100. Will cause downstream failures. Block the pipeline or fail CI.
   </Card>
-  <Card title="WARNING" icon="triangle-exclamation" iconType="solid" color="#F5A623">
-    May cause issues. Review before proceeding.
+  <Card title="warning" icon="triangle-exclamation" iconType="solid" color="#f59e0b">
+    Score 20–89. Drift detected that may cause issues. Review before proceeding.
   </Card>
-  <Card title="OK" icon="circle-check" iconType="solid" color="#3DDB84">
-    No issues detected. Safe to proceed.
+  <Card title="pass" icon="circle-check" iconType="solid" color="#22c55e">
+    Score 0–19. Schema matches the contract. Safe to proceed.
   </Card>
 </CardGroup>
 
 ---
 
-## Default Severity Matrix
+## Scoring Formula
 
-| Change                                    | Default Severity                                              | Reason                                          |
-| ----------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------- |
-| Required column removed                   | **BREAKING**                                                  | Downstream queries will fail on missing column  |
-| Optional column removed                   | **WARNING**                                                   | May break some consumers but not all            |
-| Type narrowed (e.g. `string → integer`)   | **BREAKING**                                                  | Existing casts will fail                        |
-| Type widened (e.g. `integer → float`)     | **WARNING**                                                   | Usually safe but worth reviewing                |
-| Column renamed                            | **BREAKING** (if `treat_renames_as_breaking: true`)           | All references to old name break                |
-| New column added                          | **WARNING** (if `allow_additional_columns: false`)            | Unexpected shape change                         |
-| New column added                          | **OK** (if `allow_additional_columns: true`)                  | Expected and allowed                            |
-| `nullable → non-nullable`                 | **BREAKING**                                                  | Existing null values will fail validation       |
-| `non-nullable → nullable`                 | **WARNING**                                                   | Relaxes constraint, usually safe                |
-| No change                                 | **OK**                                                        | Column matches contract exactly                 |
+Points are added for each difference found between the incoming schema and the contract.
+The total is **capped at 100**.
+
+| Change Type | Points |
+|-------------|--------|
+| Required column removed | +40 |
+| Optional column removed | +20 |
+| Column type changed | +30 per column |
+| New column added | +5 per column |
+
+### Score → Result Mapping
+
+| Score Range | Result |
+|-------------|--------|
+| 0 – 19 | `pass` |
+| 20 – 89 | `warning` |
+| 90 – 100 | `breaking` |
+
+<Note>
+  The `required` flag on each column definition determines whether a removed
+  column scores +40 or +20. Set `required: true` for columns your downstream
+  consumers cannot function without.
+</Note>
 
 ---
 
-## Real Examples
+## Worked Examples
 
-### BREAKING: Required Column Removed
+### Example 1 — breaking (score: 95)
 
+Contract has `email (string, required)` and `created_at (timestamp, required)`.
+Incoming schema is missing `email` entirely, and `created_at` has changed type to `string`.
+
+| Change | Points |
+|--------|--------|
+| `email` removed (required) | +40 |
+| `created_at` type changed (`timestamp → string`) | +30 |
+| **Total** | **70** → capped? No → `warning` |
+
+Wait — let's add one more required column removed:
+
+| Change | Points |
+|--------|--------|
+| `email` removed (required) | +40 |
+| `user_id` removed (required) | +40 |
+| `created_at` type changed | +30 |
+| **Total (capped at 100)** | **100 → `breaking`** |
 ```json
-// Contract has:
-{ "name": "email", "type": "string", "nullable": false }
-
-// Incoming schema is missing "email" entirely
-
-// DriftGuard result:
 {
-  "column": "email",
-  "change": "REMOVED",
-  "severity": "BREAKING",
-  "message": "Required column 'email' is missing from incoming schema."
-}
-```
-
-### BREAKING: Type Narrowed
-
-```json
-// Contract has:
-{ "name": "created_at", "type": "timestamp" }
-
-// Incoming schema has:
-{ "name": "created_at", "type": "string" }
-
-// DriftGuard result:
-{
-  "column": "created_at",
-  "change": "TYPE_CHANGED",
-  "from_type": "timestamp",
-  "to_type": "string",
-  "severity": "BREAKING",
-  "message": "Narrowing type change. Downstream casts will fail."
-}
-```
-
-### WARNING: New Column Added Unexpectedly
-
-```json
-// Contract rules: { "allow_additional_columns": false }
-// Incoming schema has a new column "updated_at" not in contract
-
-// DriftGuard result:
-{
-  "column": "updated_at",
-  "change": "ADDED",
-  "severity": "WARNING",
-  "message": "New column detected. allow_additional_columns is false in this contract."
+  "result": "breaking",
+  "severity": 100,
+  "diff": {
+    "removed": ["email", "user_id"],
+    "type_changes": [
+      { "column": "created_at", "from": "timestamp", "to": "string" }
+    ],
+    "added": []
+  }
 }
 ```
 
 ---
 
-## Overriding Severity
+### Example 2 — warning (score: 70)
 
-You can customize severity per contract using [Rules](/rules). For example, setting `allow_additional_columns: true` downgrades new column detection from `WARNING` to `OK`.
+Contract has `email (string, required)` and `created_at (timestamp, required)`.
+Incoming schema is missing `email`, and `created_at` has changed type to `string`.
 
-<Info>
-  Custom per-column severity overrides are on the roadmap for v0.2. For now, use contract-level rules to tune sensitivity.
-</Info>
+| Change | Points |
+|--------|--------|
+| `email` removed (required) | +40 |
+| `created_at` type changed | +30 |
+| **Total** | **70 → `warning`** |
+```json
+{
+  "result": "warning",
+  "severity": 70,
+  "diff": {
+    "removed": ["email"],
+    "type_changes": [
+      { "column": "created_at", "from": "timestamp", "to": "string" }
+    ],
+    "added": []
+  }
+}
+```
+
+---
+
+### Example 3 — pass (score: 5)
+
+Contract has `email`, `user_id`, `created_at`. Incoming schema matches all three
+but adds one unexpected new column `updated_at`.
+
+| Change | Points |
+|--------|--------|
+| `updated_at` added | +5 |
+| **Total** | **5 → `pass`** |
+```json
+{
+  "result": "pass",
+  "severity": 5,
+  "diff": {
+    "removed": [],
+    "type_changes": [],
+    "added": ["updated_at"]
+  }
+}
+```
+
+---
+
+## What is Not Currently Detected
+
+The current diff engine tracks three change types: **removed columns**,
+**type changes**, and **added columns**. The following are not yet detected:
+
+| Change | Status |
+|--------|--------|
+| Column renames | Not detected — appears as a removal + addition |
+| Nullability changes | Not detected |
+| Column reordering | Not detected — order is not enforced |
+
+---
+
+## Customising Severity
+
+Contract-level rules to customise scoring (such as ignoring new columns or
+changing how renames are treated) are on the roadmap. See [Rules](/concepts/rules)
+for the planned behaviour and current workarounds.
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Run a Check" icon="play" href="/api-reference/checks/run">
+    See the full scoring formula in action with the check endpoint.
+  </Card>
+  <Card title="Rules" icon="sliders" href="/concepts/rules">
+    Planned contract-level rules for customising severity thresholds.
+  </Card>
+</CardGroup>

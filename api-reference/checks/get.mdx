@@ -1,27 +1,97 @@
-# Get Check
-
-Fetch a previously run check.
-
+---
+title: "Get Check"
+description: "Fetch the result of a previously run schema check by its ID."
 ---
 
 ## Endpoint
-
 ```http
-GET /v1/checks/{check_id}
+GET /api/v1/checks/{id}
 Host: api.driftguard.dev
 ```
 
 ---
 
-## Example
+## Path Parameters
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string | Yes | The check ID returned by `POST /api/v1/check` |
+
+---
+
+## Request
 ```bash
-curl -s https://api.driftguard.dev/v1/checks/chk_01HX7KN123 \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY"
+curl -s https://api.driftguard.dev/api/v1/checks/your_check_id_here \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
 ```
 
 ---
 
+## Response
+```json
+{
+  "id": "your_check_id_here",
+  "contract_id": "your_contract_id_here",
+  "result": "breaking",
+  "severity": 70,
+  "diff": {
+    "removed": ["email"],
+    "type_changes": [
+      { "column": "created_at", "from": "timestamp", "to": "string" }
+    ],
+    "added": []
+  },
+  "credits_used": 1,
+  "created_at": "2026-03-01T18:00:14Z"
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for this check |
+| `contract_id` | string | The contract this check was run against |
+| `result` | string | `pass`, `warning`, or `breaking` |
+| `severity` | integer | Score from 0–100. See [Severity Levels](/concepts/severity-levels) |
+| `diff.removed` | array | Column names present in the contract but missing from the incoming schema |
+| `diff.type_changes` | array | Columns whose type changed, with `from` and `to` values |
+| `diff.added` | array | Column names present in the incoming schema but not in the contract |
+| `credits_used` | integer | Always `1` — each check costs one credit |
+| `created_at` | string | ISO 8601 timestamp of when the check was run |
+
+---
+
+## Result Thresholds
+
+| Result | Severity Range | Meaning |
+|--------|---------------|---------|
+| `pass` | 0 – 19 | Schema matches contract |
+| `warning` | 20 – 89 | Drift detected, may cause issues |
+| `breaking` | 90 – 100 | Drift will break downstream consumers |
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `401` | Missing or invalid `X-API-Key` |
+| `404` | Check not found, or belongs to a different user |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
 <Note>
-  The response body is identical to `POST /v1/checks`. Checks are retained for 7–90 days depending on your plan.
+  The response shape is identical to the response from `POST /api/v1/check`.
+  Store the `id` from your check responses if you need to retrieve them later.
 </Note>
+
+<CardGroup cols={2}>
+  <Card title="Run a Check" icon="play" href="/api-reference/checks/run">
+    See how to run a schema check against a contract.
+  </Card>
+  <Card title="Severity Levels" icon="gauge" href="/concepts/severity-levels">
+    Understand how the 0–100 severity score is calculated.
+  </Card>
+</CardGroup>

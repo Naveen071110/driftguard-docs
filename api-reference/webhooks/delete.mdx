@@ -1,0 +1,80 @@
+---
+title: "Delete Webhook"
+description: "Permanently delete a webhook from your account."
+---
+
+## Endpoint
+```http
+DELETE /api/v1/webhooks/{id}
+Host: api.driftguard.dev
+```
+
+Permanently removes a webhook from your account. Once deleted, DriftGuard
+will immediately stop delivering check results to that endpoint.
+This action is **irreversible**.
+
+<Note>
+  Unlike API keys, webhooks do not need to be deactivated before deletion.
+  You can delete an active webhook directly.
+</Note>
+
+---
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string | Yes | The webhook ID to delete — from [GET /api/v1/webhooks](/api-reference/webhooks/list) |
+
+---
+
+## Request
+```bash
+curl -s -X DELETE https://api.driftguard.dev/api/v1/webhooks/your_webhook_id_here \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
+```
+
+---
+
+## Response
+```json
+{
+  "id": "your_webhook_id_here",
+  "deleted": true
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | The webhook that was permanently deleted |
+| `deleted` | boolean | Always `true` on a successful delete |
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `401` | Missing or invalid `X-API-Key` |
+| `404` | Webhook not found, or belongs to a different user |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<Note>
+  If you want to temporarily stop deliveries without losing the webhook
+  configuration, note that a pause/deactivate endpoint is not yet available.
+  Your options today are to delete and recreate, or to point the webhook at
+  a URL that returns `2xx` without acting on the payload.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="List Webhooks" icon="list" href="/api-reference/webhooks/list">
+    View all webhooks and their IDs before deleting.
+  </Card>
+  <Card title="Create Webhook" icon="plus" href="/api-reference/webhooks/create">
+    Register a new webhook after deleting the old one.
+  </Card>
+</CardGroup>

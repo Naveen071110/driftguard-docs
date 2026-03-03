@@ -1,0 +1,73 @@
+---
+title: "Activate API Key"
+description: "Reactivate a previously revoked API key."
+---
+
+## Endpoint
+```http
+POST /api/v1/keys/{id}/activate
+Host: api.driftguard.dev
+```
+
+Activating a key sets `is_active` back to `true`. Requests made with the key
+will be accepted again immediately. Only keys that have been
+[revoked](/api-reference/keys/revoke) can be activated — keys that have been
+hard deleted cannot be recovered.
+
+---
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string | Yes | The key ID to reactivate — from [GET /api/v1/keys](/api-reference/keys/list) |
+
+---
+
+## Request
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/keys/your_key_id_here/activate \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
+```
+
+---
+
+## Response
+```json
+{
+  "id": "your_key_id_here",
+  "is_active": true,
+  "environment": "live",
+  "key_preview": "dg_live_xxxxxxxx"
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | The key that was reactivated |
+| `is_active` | boolean | Always `true` after a successful activate |
+| `environment` | string | `live` or `test` |
+| `key_preview` | string | First 16 characters of the key for identification |
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `401` | Missing or invalid `X-API-Key` |
+| `404` | Key not found, or belongs to a different user |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Revoke Key" icon="ban" href="/api-reference/keys/revoke">
+    Deactivate a key again if needed.
+  </Card>
+  <Card title="List Keys" icon="list" href="/api-reference/keys/list">
+    View all keys and their current active status.
+  </Card>
+</CardGroup>

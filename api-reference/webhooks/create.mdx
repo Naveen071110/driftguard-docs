@@ -1,46 +1,124 @@
-# Create Webhook
-
-Register a webhook endpoint that DriftGuard will call whenever a check completes with certain statuses.
+---
+title: "Create Webhook"
+description: "Register a webhook endpoint that DriftGuard will POST to when a check completes."
+---
 
 ## Endpoint
-
-<div className="api-endpoint">
-
 ```http
-POST /v1/webhooks
+POST /api/v1/webhooks
 Host: api.driftguard.dev
 ```
 
-</div>
+---
 
 ## Request
-
-```json
-{
-  "name": "Slack data-alerts channel",
-  "target_url": "https://hooks.slack.com/services/...",
-  "event_types": ["BREAKING", "WARNING"],
-  "contract_id": null
-}
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/webhooks \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://hooks.slack.com/services/your/slack/webhook",
+    "events": ["breaking", "warning"],
+    "contract_id": null
+  }'
 ```
 
-| Field       | Type          | Required | Description                                |
-| ----------- | ------------- | -------- | ------------------------------------------ |
-| name        | string        | ❌       | Friendly label for the webhook             |
-| target_url  | string        | ✅       | URL DriftGuard will POST to                |
-| event_types | array         | ✅       | Statuses that trigger this webhook         |
-| contract_id | string / null | ❌       | Scope to a single contract or null for all |
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `url` | string | ✅ | The HTTPS URL DriftGuard will POST check results to. HTTP URLs are rejected. |
+| `events` | array | ✅ | List of result types that trigger this webhook. Valid values: `breaking`, `warning`, `pass` |
+| `contract_id` | string \| null | ❌ | Scope this webhook to a single contract ID, or `null` to fire for all contracts |
+
+<Warning>
+  The `url` must use HTTPS. Plaintext HTTP endpoints will be rejected with a `400` error.
+</Warning>
+
+---
 
 ## Response
-
 ```json
 {
-  "webhook_id": "wh_01HX8ABCD",
-  "name": "Slack data-alerts channel",
-  "target_url": "https://hooks.slack.com/services/...",
-  "event_types": ["BREAKING", "WARNING"],
+  "id": "your_webhook_id_here",
+  "url": "https://hooks.slack.com/services/your/slack/webhook",
+  "events": ["breaking", "warning"],
   "contract_id": null,
-  "created_at": "2026-02-27T19:22:00Z",
-  "active": true
+  "active": true,
+  "secret": "whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "created_at": "2026-03-01T19:22:00Z"
 }
 ```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for this webhook |
+| `url` | string | The HTTPS endpoint DriftGuard will deliver payloads to |
+| `events` | array | Result types that trigger this webhook |
+| `contract_id` | string \| null | Contract scope — `null` means all contracts |
+| `active` | boolean | Whether this webhook is currently active. Newly created webhooks are always `true` |
+| `secret` | string | HMAC-SHA256 signing secret — used to verify payloads. **Shown once — store it immediately.** |
+| `created_at` | string | ISO 8601 timestamp of when the webhook was registered |
+
+<Warning>
+  The `secret` is shown **only once** at creation time. Store it securely —
+  you will need it to verify the `X-DriftGuard-Signature` header on incoming webhook payloads.
+</Warning>
+
+---
+
+## Verifying Webhook Payloads
+
+Every webhook delivery includes an `X-DriftGuard-Signature` header signed with
+HMAC-SHA256 using your webhook `secret`. Verify it on your server to ensure the
+payload genuinely came from DriftGuard and was not tampered with.
+```python
+import hmac
+import hashlib
+
+def verify_signature(payload_body: bytes, secret: str, signature_header: str) -> bool:
+    expected = hmac.new(
+        secret.encode(),
+        payload_body,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature_header)
+```
+
+---
+
+## Delivery Behaviour
+
+DriftGuard delivers webhook payloads in a background thread with automatic retries:
+
+| Attempt | Delay |
+|---------|-------|
+| 1st (initial) | Immediate |
+| 2nd retry | 5 seconds after failure |
+| 3rd retry | 25 seconds after failure |
+
+After 3 failed attempts the delivery is abandoned. Ensure your endpoint returns
+a `2xx` response within a reasonable timeout to confirm receipt.
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Invalid request body — missing `url`, non-HTTPS URL, or invalid event type |
+| `401` | Missing or invalid `X-API-Key` |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<CardGroup cols={2}>
+  <Card title="List Webhooks" icon="list" href="/api-reference/webhooks/list">
+    View all registered webhooks on your account.
+  </Card>
+  <Card title="Slack Alerts" icon="slack" href="/integrations/slack-alerts">
+    Guide to pointing a webhook at a Slack Incoming Webhook URL.
+  </Card>
+</CardGroup>

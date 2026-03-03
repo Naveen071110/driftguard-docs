@@ -1,0 +1,144 @@
+---
+title: "Infer Contract Schema"
+description: "Automatically generate a contract schema from a sample JSON payload."
+---
+
+## Endpoint
+```http
+POST /api/v1/contracts/infer
+Host: api.driftguard.dev
+```
+
+Not sure what columns to define? Send a sample JSON payload and DriftGuard
+will infer the column names and types for you — ready to pass directly into
+[POST /api/v1/contracts](/api-reference/contracts/create).
+
+<Note>
+  This endpoint does not create a contract. It returns a suggested
+  `schema.columns` array that you can review and then use in a separate
+  [create contract](/api-reference/contracts/create) request.
+</Note>
+
+---
+
+## Request
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/contracts/infer \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sample": {
+      "user_id": 1,
+      "email": "user@example.com",
+      "is_active": true,
+      "score": 98.6,
+      "created_at": "2026-01-01T00:00:00Z",
+      "metadata": { "plan": "pro" }
+    }
+  }'
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `sample` | object | ✅ | A single representative JSON record from your dataset. Use values that reflect the real types — e.g. an actual integer, not a string `"1"`. |
+
+<Tip>
+  Use a real row from your data source as the sample rather than a manually
+  constructed example. The more representative the sample, the more accurate
+  the inferred types.
+</Tip>
+
+---
+
+## Response
+```json
+{
+  "columns": [
+    { "name": "user_id",    "type": "integer",   "required": true },
+    { "name": "email",      "type": "string",    "required": true },
+    { "name": "is_active",  "type": "boolean",   "required": true },
+    { "name": "score",      "type": "number",    "required": true },
+    { "name": "created_at", "type": "timestamp", "required": true },
+    { "name": "metadata",   "type": "json",      "required": true }
+  ]
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `columns` | array | Inferred column definitions, ready to use as `schema.columns` in a create contract request |
+| `columns[].name` | string | Column name taken directly from the sample key |
+| `columns[].type` | string | Inferred type — one of `string`, `integer`, `number`, `boolean`, `date`, `timestamp`, `json` |
+| `columns[].required` | boolean | Always `true` for inferred columns — adjust manually if some columns are optional in your dataset |
+
+<Note>
+  All inferred columns are marked `required: true` by default since the sample
+  represents a complete record. Review the output and set `required: false` for
+  any columns that may be absent in real data before creating the contract.
+</Note>
+
+---
+
+## Type Inference Rules
+
+DriftGuard maps JSON value types to contract column types as follows:
+
+| Sample Value | Inferred Type |
+|-------------|---------------|
+| `1`, `42` (integer) | `integer` |
+| `98.6`, `3.14` (float) | `number` |
+| `"hello"` (string) | `string` |
+| `true`, `false` (boolean) | `boolean` |
+| `"2026-01-01T00:00:00Z"` (ISO datetime string) | `timestamp` |
+| `"2026-01-01"` (ISO date string) | `date` |
+| `{ ... }` (nested object) | `json` |
+
+---
+
+## Using the Response to Create a Contract
+
+Take the `columns` array from the response and pass it directly into the
+create contract endpoint:
+```bash
+# Step 1 — infer
+SCHEMA=$(curl -s -X POST https://api.driftguard.dev/api/v1/contracts/infer \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"sample": {"user_id": 1, "email": "user@example.com", "created_at": "2026-01-01T00:00:00Z"}}')
+
+echo $SCHEMA
+
+# Step 2 — create the contract using the inferred columns
+curl -s -X POST https://api.driftguard.dev/api/v1/contracts \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"users_production\",
+    \"schema\": $SCHEMA
+  }"
+```
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Invalid request body — `sample` missing or not a JSON object |
+| `401` | Missing or invalid `X-API-Key` |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Create Contract" icon="plus" href="/api-reference/contracts/create">
+    Use the inferred schema to create a contract.
+  </Card>
+  <Card title="Run a Check" icon="play" href="/api-reference/checks/run">
+    Once your contract is created, run your first schema check.
+  </Card>
+</CardGroup>

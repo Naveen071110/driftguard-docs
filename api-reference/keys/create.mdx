@@ -1,0 +1,85 @@
+---
+title: "Create API Key"
+description: "Generate a new API key for your account."
+---
+
+## Endpoint
+```http
+POST /api/v1/keys
+Host: api.driftguard.dev
+```
+
+---
+
+## Request
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/keys \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{ "environment": "live" }'
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `environment` | string | ✅ | `live` for production use, `test` for development and CI |
+
+---
+
+## Response
+```json
+{
+  "id": "your_key_id_here",
+  "key": "dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "key_preview": "dg_live_xxxxxxxx",
+  "environment": "live",
+  "is_active": true,
+  "created_at": "2026-03-01T12:00:00Z"
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for this key — save it for revoke, activate, and delete operations |
+| `key` | string | The full API key — **shown once only, copy it immediately** |
+| `key_preview` | string | First 16 characters of the key — this is all that will be visible after creation |
+| `environment` | string | `live` or `test` |
+| `is_active` | boolean | Always `true` for a newly created key |
+| `created_at` | string | ISO 8601 timestamp of when the key was created |
+
+<Warning>
+  The `key` field is shown **only once** at creation time. It is stored as a
+  SHA-256 hash on our servers and cannot be recovered. Copy it to a secrets
+  manager or environment variable immediately before closing this response.
+</Warning>
+
+---
+
+## Rate Limits
+
+In addition to the standard 100 req/min rate limit, key creation is limited
+to **10 new keys per hour** per user. Exceeding this returns `429`.
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Invalid or missing `environment` value |
+| `401` | Missing or invalid `X-API-Key` |
+| `429` | Rate limit exceeded — either 100 req/min or 10 key creations/hour |
+
+---
+
+<CardGroup cols={2}>
+  <Card title="List Keys" icon="list" href="/api-reference/keys/list">
+    View all keys on your account (previews only).
+  </Card>
+  <Card title="Revoke Key" icon="ban" href="/api-reference/keys/revoke">
+    Deactivate a key when it's no longer needed.
+  </Card>
+</CardGroup>

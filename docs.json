@@ -76,8 +76,9 @@
             "group": "Contracts",
             "pages": [
               "api-reference/contracts/create",
-              "api-reference/contracts/get",
+              "api-reference/contracts/infer",
               "api-reference/contracts/list",
+              "api-reference/contracts/get",
               "api-reference/contracts/update",
               "api-reference/contracts/delete"
             ]
@@ -99,7 +100,18 @@
             "group": "Webhooks",
             "pages": [
               "api-reference/webhooks/create",
-              "api-reference/webhooks/list"
+              "api-reference/webhooks/list",
+              "api-reference/webhooks/delete"
+            ]
+          },
+          {
+            "group": "API Keys",
+            "pages": [
+              "api-reference/keys/list",
+              "api-reference/keys/create",
+              "api-reference/keys/revoke",
+              "api-reference/keys/activate",
+              "api-reference/keys/delete"
             ]
           }
         ]
@@ -110,9 +122,8 @@
   "api": {
     "baseUrl": "https://api.driftguard.dev",
     "auth": {
-      "method": "bearer",
-      "name": "Authorization",
-      "valuePrefix": "Bearer "
+      "method": "key",
+      "name": "X-API-Key"
     }
   },
 

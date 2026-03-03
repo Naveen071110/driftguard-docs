@@ -1,64 +1,76 @@
-# Contracts
+---
+title: "Contracts"
+description: "A contract defines the expected schema for a dataset — the source of truth DriftGuard checks incoming data against."
+---
 
-A **contract** is the expected schema for a dataset — a list of columns, their types, nullability rules, and behavioral rules you define once and reuse in every check.
+A **contract** is the expected schema for a dataset — a list of columns and their
+types that you define once and reuse in every check.
 
-Think of it like a type definition for your data. If the incoming data no longer matches the contract, DriftGuard tells you exactly what broke and how severe it is.
+Think of it like a type definition for your data. If an incoming schema no longer
+matches the contract, DriftGuard tells you exactly what changed and how severe it is.
 
 ---
 
 ## What a Contract Contains
-
 ```json
 {
   "name": "users_production",
-  "columns": [
-    { "name": "user_id",    "type": "string",    "nullable": false },
-    { "name": "email",      "type": "string",    "nullable": false },
-    { "name": "created_at", "type": "timestamp", "nullable": false },
-    { "name": "plan",       "type": "string",    "nullable": true  }
-  ],
-  "rules": {
-    "allow_additional_columns": false,
-    "treat_renames_as_breaking": true
+  "schema": {
+    "columns": [
+      { "name": "user_id",    "type": "integer",   "required": true  },
+      { "name": "email",      "type": "string",    "required": true  },
+      { "name": "created_at", "type": "timestamp", "required": true  },
+      { "name": "plan",       "type": "string",    "required": false }
+    ]
   }
 }
 ```
 
-| Field                | Required | Description                                     |
-| -------------------- | -------- | ----------------------------------------------- |
-| `name`               | ✅        | Human-readable label for this contract          |
-| `columns`            | ✅        | Array of column definitions                     |
-| `columns[].name`     | ✅        | Column name, case-sensitive                     |
-| `columns[].type`     | ✅        | Expected data type (see supported types below)  |
-| `columns[].nullable` | ✅        | Whether null values are allowed                 |
-| `rules`              | ❌        | Optional behavioral rules (see Rules)           |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | ✅ | Human-readable label for this contract. Must be unique per account. |
+| `schema.columns` | ✅ | Array of column definitions |
+| `schema.columns[].name` | ✅ | Column name — case-sensitive |
+| `schema.columns[].type` | ✅ | Expected data type — see supported types below |
+| `schema.columns[].required` | ✅ | If `true`, this column must be present in every check. Absence scores **+40 severity points**. If `false`, absence scores **+20**. |
 
 ---
 
 ## Supported Column Types
 
-| Type        | Description          |
-| ----------- | -------------------- |
-| `string`    | Any text value       |
-| `integer`   | Whole numbers        |
-| `float`     | Decimal numbers      |
-| `boolean`   | true or false        |
-| `timestamp` | Date + time values   |
-| `date`      | Date only (no time)  |
-| `json`      | Nested JSON object   |
-| `array`     | List of values       |
-| `uuid`      | UUID format string   |
-| `unknown`   | Type not enforced    |
+DriftGuard enforces a fixed set of column types. Any type outside this list
+will be rejected with a `400` error.
+
+| Type | Description |
+|------|-------------|
+| `string` | Text values |
+| `integer` | Whole numbers |
+| `number` | Floating point / decimal numbers |
+| `boolean` | True / false values |
+| `date` | Date without time (`YYYY-MM-DD`) |
+| `timestamp` | Date with time |
+| `json` | Nested JSON / object values |
+
+<Warning>
+  Types like `float`, `array`, `uuid`, and `unknown` are **not supported** and
+  will be rejected. Use `number` instead of `float`, and `json` instead of `array`
+  for nested structures.
+</Warning>
 
 ---
 
 ## Contract Versioning
 
-Every time you update a contract with `PUT /v1/contracts/{id}`, DriftGuard increments the internal version number and logs the previous version for audit history.
+Every contract has a `version` field that starts at `1`. It is designed to
+increment each time the contract schema is updated — so you always know which
+version of a contract a historical check was run against.
 
-<Info>
-  You don't need to create a new contract for minor updates. Use `PUT` to update in place — DriftGuard handles versioning automatically.
-</Info>
+<Note>
+  The `PUT /api/v1/contracts/{id}` update endpoint is not yet available.
+  To change a contract's schema today, create a new contract via
+  [POST /api/v1/contracts](/api-reference/contracts/create) with the updated
+  column definitions.
+</Note>
 
 ---
 
@@ -70,15 +82,49 @@ Use one contract per logical dataset, table, or feed. For example:
 - One contract per partner data feed
 - One contract per dbt model output
 
+This keeps checks scoped and makes it easy to identify exactly which dataset
+drifted when a `breaking` result comes in.
+
 ---
 
-## Next Steps
+## Inferring a Contract from Sample Data
+
+Not sure what columns to define? Use the infer endpoint to generate a contract
+schema automatically from a sample JSON payload:
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/contracts/infer \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sample": {
+      "user_id": 1,
+      "email": "user@example.com",
+      "created_at": "2026-01-01T00:00:00Z"
+    }
+  }'
+```
+
+DriftGuard will return a ready-to-use `schema.columns` array you can pass
+directly into `POST /api/v1/contracts`.
+
+---
+
+## Creating and Managing Contracts
+
+| Action | Endpoint |
+|--------|----------|
+| Create a contract | [POST /api/v1/contracts](/api-reference/contracts/create) |
+| List all contracts | [GET /api/v1/contracts](/api-reference/contracts/list) |
+| Get a single contract | [GET /api/v1/contracts/{id}](/api-reference/contracts/get) |
+| Infer schema from sample | [POST /api/v1/contracts/infer](/api-reference/contracts/create#infer) |
+
+---
 
 <CardGroup cols={2}>
   <Card title="Run a Check" icon="bolt" href="/concepts/checks">
     Learn how checks compare incoming schemas against contracts.
   </Card>
-  <Card title="Configure Rules" icon="sliders" href="/concepts/rules">
-    Control what counts as BREAKING vs WARNING.
+  <Card title="Severity Levels" icon="gauge" href="/concepts/severity-levels">
+    Understand how the required vs optional distinction affects your severity score.
   </Card>
 </CardGroup>

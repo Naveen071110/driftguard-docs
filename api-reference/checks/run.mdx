@@ -1,81 +1,121 @@
-# Run Check
-
-Compare an incoming schema against an existing contract and return a status (`OK`, `WARNING`, `BREAKING`) and a diff.
-
+---
+title: "Run Check"
+description: "Compare an incoming schema against a saved contract and get an instant verdict."
 ---
 
 ## Endpoint
-
 ```http
-POST /v1/checks
+POST /api/v1/check
 Host: api.driftguard.dev
 ```
+
+<Note>
+  Each call to this endpoint deducts **1 credit** from your account.
+  Check your balance anytime via [GET /api/v1/usage](/api-reference/usage/get).
+</Note>
 
 ---
 
 ## Request
-
-```json
-{
-  "contract_id": "ctr_01HX7KMQZP",
-  "incoming_schema": [
-    { "name": "user_id",    "type": "string" },
-    { "name": "created_at", "type": "string" }
-  ],
-  "source": "ci"
-}
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/check \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "contract_id": "your_contract_id_here",
+    "incoming_schema": {
+      "columns": [
+        { "name": "user_id",    "type": "integer" },
+        { "name": "created_at", "type": "string"  }
+      ]
+    }
+  }'
 ```
 
-| Field                    | Type     | Required | Description                                          |
-| ------------------------ | -------- | -------- | ---------------------------------------------------- |
-| `contract_id`            | `string` | ✅        | ID of the contract to check against                  |
-| `incoming_schema`        | `array`  | ✅        | Columns from the actual data source                  |
-| `incoming_schema[].name` | `string` | ✅        | Column name                                          |
-| `incoming_schema[].type` | `string` | ✅        | Detected type                                        |
-| `source`                 | `string` | ❌        | Tag e.g. `ci`, `pipeline`, `manual`                  |
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `contract_id` | string | ✅ | ID of the contract to check against |
+| `incoming_schema.columns` | array | ✅ | List of columns from the actual data source |
+| `incoming_schema.columns[].name` | string | ✅ | Column name |
+| `incoming_schema.columns[].type` | string | ✅ | Column type — must be one of `string`, `integer`, `number`, `boolean`, `date`, `timestamp`, `json` |
 
 ---
 
 ## Response
-
 ```json
 {
-  "check_id": "chk_01HX7KN123",
-  "status": "BREAKING",
-  "summary": {
-    "breaking": 2,
-    "warning": 0,
-    "ok": 1
+  "id": "your_check_id_here",
+  "contract_id": "your_contract_id_here",
+  "result": "breaking",
+  "severity": 70,
+  "diff": {
+    "removed": ["email"],
+    "type_changes": [
+      { "column": "created_at", "from": "timestamp", "to": "string" }
+    ],
+    "added": []
   },
-  "diff": [
-    {
-      "column": "email",
-      "change": "REMOVED",
-      "severity": "BREAKING",
-      "message": "Required column 'email' is missing from incoming schema."
-    },
-    {
-      "column": "created_at",
-      "change": "TYPE_CHANGED",
-      "from_type": "timestamp",
-      "to_type": "string",
-      "severity": "BREAKING",
-      "message": "Narrowing type change. Downstream casts will fail."
-    }
-  ],
-  "evaluated_at": "2026-02-27T18:00:14Z",
-  "credits_used": 1
+  "credits_used": 1,
+  "created_at": "2026-03-01T18:00:14Z"
 }
 ```
 
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for this check — use it with [GET /api/v1/checks/{id}](/api-reference/checks/get) to retrieve later |
+| `contract_id` | string | The contract this check was run against |
+| `result` | string | `pass`, `warning`, or `breaking` |
+| `severity` | integer | Score from 0–100. See [Severity Levels](/concepts/severity-levels) |
+| `diff.removed` | array | Column names present in the contract but missing from the incoming schema |
+| `diff.type_changes` | array | Columns whose type changed, with `from` and `to` values |
+| `diff.added` | array | Column names present in the incoming schema but not in the contract |
+| `credits_used` | integer | Always `1` |
+| `created_at` | string | ISO 8601 timestamp of when the check was run |
+
 ---
 
-## Errors
+## How Severity is Scored
 
-| Code  | Description             |
-| ----- | ----------------------- |
-| `400` | Invalid schema format   |
-| `401` | Unauthorized            |
-| `403` | Out of credits          |
-| `404` | Contract not found      |
-| `429` | Rate limit exceeded     |
+The `severity` score is calculated from the diff and capped at 100:
+
+| Change Type | Points |
+|-------------|--------|
+| Required column removed | +40 |
+| Optional column removed | +20 |
+| Column type changed | +30 per column |
+| New column added | +5 per column |
+
+The score then maps to a result:
+
+| Result | Severity Range | Meaning |
+|--------|---------------|---------|
+| `pass` | 0 – 19 | Schema matches contract |
+| `warning` | 20 – 89 | Drift detected, may cause issues |
+| `breaking` | 90 – 100 | Drift will break downstream consumers |
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Invalid request body — bad column type or missing required field |
+| `401` | Missing or invalid `X-API-Key` |
+| `403` | Account has no credits remaining |
+| `404` | Contract not found, or belongs to a different user |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Get Check" icon="clock-rotate-left" href="/api-reference/checks/get">
+    Retrieve a historical check result by ID.
+  </Card>
+  <Card title="Severity Levels" icon="gauge" href="/concepts/severity-levels">
+    Understand how the 0–100 severity score is calculated in detail.
+  </Card>
+</CardGroup>

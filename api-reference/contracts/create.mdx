@@ -1,83 +1,134 @@
-# Create Contract
-
-Create a new contract that defines the expected schema for a dataset.
-
+---
+title: "Create Contract"
+description: "Create a new contract that defines the expected schema for a dataset."
 ---
 
 ## Endpoint
-
 ```http
-POST /v1/contracts
+POST /api/v1/contracts
 Host: api.driftguard.dev
 ```
 
 ---
 
 ## Request
+```bash
+curl -s -X POST https://api.driftguard.dev/api/v1/contracts \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "users_production",
+    "schema": {
+      "columns": [
+        { "name": "user_id",    "type": "integer",   "required": true },
+        { "name": "email",      "type": "string",    "required": true },
+        { "name": "created_at", "type": "timestamp", "required": true }
+      ]
+    }
+  }'
+```
 
 ### Headers
 
-| Header          | Value                |
-| --------------- | -------------------- |
-| `Authorization` | `Bearer dg_live_...` |
-| `Content-Type`  | `application/json`   |
+| Header | Value |
+|--------|-------|
+| `X-API-Key` | `dg_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` |
+| `Content-Type` | `application/json` |
 
 ### Body
-
 ```json
 {
   "name": "users_production",
-  "columns": [
-    { "name": "user_id",    "type": "string",    "nullable": false },
-    { "name": "email",      "type": "string",    "nullable": false },
-    { "name": "created_at", "type": "timestamp", "nullable": false }
-  ],
-  "rules": {
-    "allow_additional_columns": false,
-    "treat_renames_as_breaking": true
+  "schema": {
+    "columns": [
+      { "name": "user_id",    "type": "integer",   "required": true },
+      { "name": "email",      "type": "string",    "required": true },
+      { "name": "created_at", "type": "timestamp", "required": true }
+    ]
   }
 }
 ```
 
 ### Field Reference
 
-| Field                | Type      | Required | Description                                                                                    |
-| -------------------- | --------- | -------- | ---------------------------------------------------------------------------------------------- |
-| `name`               | `string`  | ✅        | Human-readable name for the contract                                                           |
-| `columns`            | `array`   | ✅        | List of column definitions                                                                     |
-| `columns[].name`     | `string`  | ✅        | Column name (case-sensitive)                                                                   |
-| `columns[].type`     | `string`  | ✅        | One of `string`, `integer`, `float`, `boolean`, `timestamp`, `date`, `json`, `array`, `uuid`, `unknown` |
-| `columns[].nullable` | `boolean` | ✅        | Whether null values are allowed                                                                |
-| `rules`              | `object`  | ❌        | Contract rules, see [Rules](/concepts/rules)                                                   |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | ✅ | Human-readable name for the contract. Must be unique per account. |
+| `schema.columns` | array | ✅ | List of column definitions |
+| `schema.columns[].name` | string | ✅ | Column name (case-sensitive) |
+| `schema.columns[].type` | string | ✅ | Column type — see valid types below |
+| `schema.columns[].required` | boolean | ✅ | If `true`, the column must be present in every check. Removal of a required column scores **+40 severity points**. Removal of an optional column scores **+20**. |
+
+### Valid Column Types
+
+| Type | Description |
+|------|-------------|
+| `string` | Text values |
+| `integer` | Whole numbers |
+| `number` | Floating point / decimal numbers |
+| `boolean` | True / false values |
+| `date` | Date without time (`YYYY-MM-DD`) |
+| `timestamp` | Date with time |
+| `json` | Nested JSON / object values |
+
+<Warning>
+  Any type outside this list will be rejected with a `400` error. Types like `float`, `array`, `uuid`, and `unknown` are not supported.
+</Warning>
 
 ---
 
 ## Response
-
 ```json
 {
-  "contract_id": "ctr_01HX7KMQZP",
+  "id": "your_contract_id_here",
   "name": "users_production",
   "version": 1,
-  "columns": [
-    { "name": "user_id", "type": "string", "nullable": false },
-    { "name": "email",   "type": "string", "nullable": false }
-  ],
-  "rules": {
-    "allow_additional_columns": false,
-    "treat_renames_as_breaking": true
+  "schema": {
+    "columns": [
+      { "name": "user_id",    "type": "integer",   "required": true },
+      { "name": "email",      "type": "string",    "required": true },
+      { "name": "created_at", "type": "timestamp", "required": true }
+    ]
   },
-  "created_at": "2026-02-27T18:00:00Z",
-  "updated_at": "2026-02-27T18:00:00Z"
+  "created_at": "2026-03-01T18:00:00Z",
+  "updated_at": "2026-03-01T18:00:00Z"
 }
 ```
 
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for the contract — save this to run checks against it |
+| `name` | string | The name you gave the contract |
+| `version` | integer | Starts at `1`. Increments each time the contract schema is updated |
+| `schema.columns` | array | The full list of column definitions as saved |
+| `created_at` | string | ISO 8601 timestamp of when the contract was created |
+| `updated_at` | string | ISO 8601 timestamp of the last update — same as `created_at` on initial creation |
+
+<Note>
+  Save the `id` from the response. You will need it to run checks via
+  [POST /api/v1/check](/api-reference/checks/run) and to retrieve the contract later.
+</Note>
+
 ---
 
-## Errors
+## Error Responses
 
-| Code  | Description                                                                     |
-| ----- | ------------------------------------------------------------------------------- |
-| `400` | Invalid contract payload (missing columns, duplicate names, unsupported type)   |
-| `401` | Missing or invalid API key                                                      |
-| `409` | Contract with this name already exists for your account                         |
+| Status | Meaning |
+|--------|---------|
+| `400` | Invalid request body — missing fields, duplicate column names, or unsupported type |
+| `401` | Missing or invalid `X-API-Key` |
+| `409` | A contract with this name already exists for your account |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Run a Check" icon="play" href="/api-reference/checks/run">
+    Use your new contract ID to run your first schema check.
+  </Card>
+  <Card title="Infer a Contract" icon="wand-magic-sparkles" href="/quickstart#2-optional-infer-a-contract-from-sample-data">
+    Not sure what columns to define? Let DriftGuard infer them from a sample payload.
+  </Card>
+</CardGroup>

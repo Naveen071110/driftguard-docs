@@ -1,58 +1,111 @@
-# Update Contract
-
-Update the name, columns, or rules of an existing contract.
-
+---
+title: "Update Contract"
+description: "Update the schema of an existing contract."
 ---
 
-## Endpoint
+<Warning>
+  This endpoint is not yet available. It is planned for a future release.
+  To change a contract's schema today, create a new contract via
+  [POST /api/v1/contracts](/api-reference/contracts/create) with the updated column definitions.
+</Warning>
 
+## Endpoint
 ```http
-PUT /v1/contracts/{contract_id}
+PUT /api/v1/contracts/{id}
 Host: api.driftguard.dev
 ```
 
 ---
 
-## Request
+## Planned Behaviour
 
-Same body shape as `POST /v1/contracts`. Any omitted fields are left unchanged.
+Once available, this endpoint will:
 
-```bash
-curl -s -X PUT https://api.driftguard.dev/v1/contracts/ctr_01HX7KMQZP \
-  -H "Authorization: Bearer $DRIFTGUARD_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "rules": {
-      "allow_additional_columns": true,
-      "treat_renames_as_breaking": true
-    }
-  }'
-```
+- Accept a partial or full update to the contract's `schema.columns`
+- Automatically increment the contract's `version` number on each successful update
+- Leave any omitted fields unchanged
+- Apply to all future checks run against this contract immediately — existing historical check results are not affected
 
 ---
 
-## Response
+## Path Parameters
 
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string | Yes | The contract ID to update |
+
+---
+
+## Planned Request Body
 ```json
 {
-  "contract_id": "ctr_01HX7KMQZP",
-  "name": "users_production",
+  "name": "users_production_v2",
+  "schema": {
+    "columns": [
+      { "name": "user_id",    "type": "integer",   "required": true },
+      { "name": "email",      "type": "string",    "required": true },
+      { "name": "created_at", "type": "timestamp", "required": true },
+      { "name": "updated_at", "type": "timestamp", "required": false }
+    ]
+  }
+}
+```
+
+### Planned Field Reference
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | ❌ | New name for the contract — must be unique per account |
+| `schema.columns` | array | ❌ | Full replacement list of column definitions — omit to leave columns unchanged |
+| `schema.columns[].name` | string | ✅ (if columns provided) | Column name (case-sensitive) |
+| `schema.columns[].type` | string | ✅ (if columns provided) | One of `string`, `integer`, `number`, `boolean`, `date`, `timestamp`, `json` |
+| `schema.columns[].required` | boolean | ✅ (if columns provided) | Whether the column must be present in every check |
+
+---
+
+## Planned Response
+```json
+{
+  "id": "your_contract_id_here",
+  "name": "users_production_v2",
   "version": 2,
-  "rules": {
-    "allow_additional_columns": true,
-    "treat_renames_as_breaking": true
+  "schema": {
+    "columns": [
+      { "name": "user_id",    "type": "integer",   "required": true },
+      { "name": "email",      "type": "string",    "required": true },
+      { "name": "created_at", "type": "timestamp", "required": true },
+      { "name": "updated_at", "type": "timestamp", "required": false }
+    ]
   },
-  "created_at": "2026-02-27T18:00:00Z",
-  "updated_at": "2026-02-28T09:12:00Z"
+  "created_at": "2026-03-01T18:00:00Z",
+  "updated_at": "2026-03-02T09:12:00Z"
 }
 ```
 
 ---
 
-## Errors
+## Planned Error Responses
 
-| Code  | Description          |
-| ----- | -------------------- |
-| `400` | Invalid payload      |
-| `401` | Unauthorized         |
-| `404` | Contract not found   |
+| Status | Meaning |
+|--------|---------|
+| `400` | Invalid request body — unsupported type or missing required column fields |
+| `401` | Missing or invalid `X-API-Key` |
+| `404` | Contract not found, or belongs to a different user |
+| `409` | Updated name already exists for another contract on your account |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<Note>
+  Want to be notified when this endpoint goes live?
+  Watch the [Changelog](/changelog) or follow [@naveenbale](https://twitter.com/naveenbale) on X.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Create Contract" icon="plus" href="/api-reference/contracts/create">
+    Create a new contract with updated column definitions in the meantime.
+  </Card>
+  <Card title="Get Contract" icon="file-magnifying-glass" href="/api-reference/contracts/get">
+    Retrieve a contract's current schema and version.
+  </Card>
+</CardGroup>

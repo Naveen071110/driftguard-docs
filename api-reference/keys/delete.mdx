@@ -1,0 +1,79 @@
+---
+title: "Delete API Key"
+description: "Permanently delete a revoked API key from your account."
+---
+
+## Endpoint
+```http
+DELETE /api/v1/keys/{id}
+Host: api.driftguard.dev
+```
+
+Permanently removes a key from your account. This action is **irreversible** —
+the key cannot be recovered or reactivated after deletion.
+
+<Warning>
+  A key **must be revoked before it can be deleted**. Attempting to delete an
+  active key will return a `400` error. Revoke it first via
+  [POST /api/v1/keys/{id}/revoke](/api-reference/keys/revoke), then delete it.
+</Warning>
+
+---
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string | Yes | The key ID to delete — must already be revoked |
+
+---
+
+## Request
+```bash
+# Step 1 — revoke first
+curl -s -X POST https://api.driftguard.dev/api/v1/keys/your_key_id_here/revoke \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
+
+# Step 2 — then delete
+curl -s -X DELETE https://api.driftguard.dev/api/v1/keys/your_key_id_here \
+  -H "X-API-Key: $DRIFTGUARD_KEY"
+```
+
+---
+
+## Response
+```json
+{
+  "id": "your_key_id_here",
+  "deleted": true
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | The key that was permanently deleted |
+| `deleted` | boolean | Always `true` on a successful delete |
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Key is still active — revoke it before deleting |
+| `401` | Missing or invalid `X-API-Key` |
+| `404` | Key not found, or belongs to a different user |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<CardGroup cols={2}>
+  <Card title="Revoke Key" icon="ban" href="/api-reference/keys/revoke">
+    Revoke a key before deleting it.
+  </Card>
+  <Card title="Create Key" icon="plus" href="/api-reference/keys/create">
+    Create a replacement key after deleting the old one.
+  </Card>
+</CardGroup>
