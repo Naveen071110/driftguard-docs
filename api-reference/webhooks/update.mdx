@@ -1,0 +1,89 @@
+---
+title: "Update Webhook"
+description: "Activate or deactivate a webhook without deleting it."
+---
+
+## Endpoint
+```http
+PATCH /api/v1/webhooks/{id}
+Host: api.driftguard.dev
+```
+
+---
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id` | string | Yes | The webhook ID to update — from [GET /api/v1/webhooks](/api-reference/webhooks/list) |
+
+---
+
+## Request
+```bash
+curl -s -X PATCH https://api.driftguard.dev/api/v1/webhooks/your_webhook_id_here \
+  -H "X-API-Key: $DRIFTGUARD_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "active": false
+  }'
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `active` | boolean | ✅ | Set to `false` to pause deliveries, `true` to resume them |
+
+---
+
+## Response
+```json
+{
+  "id": "your_webhook_id_here",
+  "url": "https://hooks.slack.com/services/your/slack/webhook",
+  "events": ["breaking", "warning"],
+  "contract_id": null,
+  "active": false,
+  "created_at": "2026-03-01T19:22:00Z"
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier for this webhook |
+| `url` | string | The HTTPS endpoint DriftGuard delivers payloads to |
+| `events` | array | Result types that trigger this webhook |
+| `contract_id` | string \| null | Contract scope — `null` means all contracts |
+| `active` | boolean | The updated active status |
+| `created_at` | string | ISO 8601 timestamp of when the webhook was registered |
+
+---
+
+## Error Responses
+
+| Status | Meaning |
+|--------|---------|
+| `400` | Invalid request body — `active` missing or not a boolean |
+| `401` | Missing or invalid `X-API-Key` |
+| `404` | Webhook not found, or belongs to a different user |
+| `429` | Rate limit exceeded — 100 req/min per key |
+
+---
+
+<Note>
+  Pausing a webhook (`"active": false`) preserves its configuration — URL, events, and
+  contract scope are all retained. Resume deliveries at any time by setting `"active": true`.
+  To permanently remove a webhook, use [DELETE /api/v1/webhooks/{id}](/api-reference/webhooks/delete).
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Delete Webhook" icon="trash" href="/api-reference/webhooks/delete">
+    Permanently remove a webhook from your account.
+  </Card>
+  <Card title="List Webhooks" icon="list" href="/api-reference/webhooks/list">
+    View all webhooks and their current active status.
+  </Card>
+</CardGroup>

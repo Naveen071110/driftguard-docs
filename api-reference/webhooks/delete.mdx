@@ -64,15 +64,14 @@ curl -s -X DELETE https://api.driftguard.dev/api/v1/webhooks/your_webhook_id_her
 ---
 
 <Note>
-  If you want to temporarily stop deliveries without losing the webhook
-  configuration, note that a pause/deactivate endpoint is not yet available.
-  Your options today are to delete and recreate, or to point the webhook at
-  a URL that returns `2xx` without acting on the payload.
+  If you want to temporarily pause deliveries without losing the webhook configuration,
+  use [PATCH /api/v1/webhooks/{id}](/api-reference/webhooks/update) and set `"active": false`.
+  You can resume at any time by setting `"active": true`.
 </Note>
 
 <CardGroup cols={2}>
-  <Card title="List Webhooks" icon="list" href="/api-reference/webhooks/list">
-    View all webhooks and their IDs before deleting.
+  <Card title="Update Webhook" icon="toggle-off" href="/api-reference/webhooks/update">
+    Pause or resume a webhook without deleting it.
   </Card>
   <Card title="Create Webhook" icon="plus" href="/api-reference/webhooks/create">
     Register a new webhook after deleting the old one.
