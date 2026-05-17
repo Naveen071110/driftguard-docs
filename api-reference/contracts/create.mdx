@@ -4,6 +4,7 @@ description: "Create a new contract that defines the expected schema for a datas
 ---
 
 ## Endpoint
+
 ```http
 POST /api/v1/contracts
 Host: api.driftguard.dev
@@ -12,6 +13,7 @@ Host: api.driftguard.dev
 ---
 
 ## Request
+
 ```bash
 curl -s -X POST https://api.driftguard.dev/api/v1/contracts \
   -H "X-API-Key: $DRIFTGUARD_KEY" \
@@ -36,6 +38,7 @@ curl -s -X POST https://api.driftguard.dev/api/v1/contracts \
 | `Content-Type` | `application/json` |
 
 ### Body
+
 ```json
 {
   "name": "users_production",
@@ -78,6 +81,7 @@ curl -s -X POST https://api.driftguard.dev/api/v1/contracts \
 ---
 
 ## Response
+
 ```json
 {
   "id": "your_contract_id_here",
