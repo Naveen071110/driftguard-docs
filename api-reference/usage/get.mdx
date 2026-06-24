@@ -6,14 +6,14 @@ description: "Returns your remaining credits and total checks run on your accoun
 ## Endpoint
 ```http
 GET /api/v1/usage
-Host: api.driftguard.dev
+Host: bb4fd5a7.driftguard-alp.pages.dev
 ```
 
 ---
 
 ## Request
 ```bash
-curl -s https://api.driftguard.dev/api/v1/usage \
+curl -s https://bb4fd5a7.driftguard-alp.pages.dev/api/v1/usage \
   -H "X-API-Key: $DRIFTGUARD_KEY"
 ```
 
@@ -49,7 +49,7 @@ The DriftGuard API allows **100 requests per minute** per API key across all end
 When exceeded, you'll receive a `429 Too Many Requests` response.
 
 If your `credits_remaining` reaches `0`, all calls to
-[POST /api/v1/check](/api-reference/checks/run) will return `403 Forbidden`
+[POST /api/v1/check](/api-reference/checks/run) will return `402 Payment Required`
 until your account is topped up.
 
 ---
