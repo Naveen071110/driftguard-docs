@@ -55,24 +55,16 @@ The total is **capped at 100**.
 
 ## Worked Examples
 
-### Example 1 — breaking (score: 95)
+### Example 1 — breaking (score: 100)
 
-Contract has `email (string, required)` and `created_at (timestamp, required)`.
-Incoming schema is missing `email` entirely, and `created_at` has changed type to `string`.
-
-| Change | Points |
-|--------|--------|
-| `email` removed (required) | +40 |
-| `created_at` type changed (`timestamp → string`) | +30 |
-| **Total** | **70** → capped? No → `warning` |
-
-Wait — let's add one more required column removed:
+Contract has `email (string, required)`, `user_id (integer, required)`, and `created_at (timestamp, required)`.
+Incoming schema is missing `email` and `user_id` entirely, and `created_at` has changed type to `string`.
 
 | Change | Points |
 |--------|--------|
 | `email` removed (required) | +40 |
 | `user_id` removed (required) | +40 |
-| `created_at` type changed | +30 |
+| `created_at` type changed (`timestamp → string`) | +30 |
 | **Total (capped at 100)** | **100 → `breaking`** |
 ```json
 {
