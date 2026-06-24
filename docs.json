@@ -124,7 +124,7 @@
   },
 
   "api": {
-    "baseUrl": "https://api.driftguard.dev",
+    "baseUrl": "https://bb4fd5a7.driftguard-alp.pages.dev",
     "auth": {
       "method": "key",
       "name": "X-API-Key"
